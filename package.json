@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build && tsx scripts/copy-standalone-assets.ts",
+    "vercel-build": "prisma generate && prisma db push && tsx prisma/seed.ts && next build && tsx scripts/copy-standalone-assets.ts",
     "start": "node .next/standalone/server.js",
     "lint": "eslint",
     "pg:start": "\"C:\\Program Files\\PostgreSQL\\17\\bin\\pg_ctl.exe\" -D .postgres-data -l .postgres.log start",
