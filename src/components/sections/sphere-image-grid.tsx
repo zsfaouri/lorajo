@@ -73,6 +73,15 @@ const sphereMath = {
   },
 };
 
+function SphereImage({ src, alt, sizes = "120px" }: { src: string; alt: string; sizes?: string }) {
+  if (src.includes("supabase.co/storage/")) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt={alt} className="h-full w-full object-cover" draggable={false} />;
+  }
+
+  return <Image src={src} alt={alt} fill sizes={sizes} className="object-cover" draggable={false} />;
+}
+
 export function SphereImageGrid({
   images = [],
   containerSize = 400,
@@ -393,15 +402,7 @@ export function SphereImageGrid({
                 onClick={() => setSelectedImage(image)}
               >
                 <span className="relative block h-full w-full overflow-hidden rounded-full border-2 border-white/30 shadow-xl">
-                  <Image
-                    src={image.src}
-                    alt={image.alt}
-                    fill
-                    sizes="120px"
-                    className="object-cover"
-                    draggable={false}
-                    loading={index < 3 ? "eager" : "lazy"}
-                  />
+                  <SphereImage src={image.src} alt={image.alt} />
                 </span>
               </button>
             );
@@ -421,7 +422,7 @@ export function SphereImageGrid({
             style={{ animation: "loraSphereScaleIn 0.25s ease-out" }}
           >
             <div className="relative aspect-square">
-              <Image src={selectedImage.src} alt={selectedImage.alt} fill sizes="448px" className="object-cover" />
+              <SphereImage src={selectedImage.src} alt={selectedImage.alt} sizes="448px" />
               <button
                 type="button"
                 onClick={() => setSelectedImage(null)}

@@ -7,6 +7,25 @@ import { useEffect, useRef, useState } from "react";
 
 import type { CmsImage } from "@/types/cms";
 
+function CarouselImage({ src, alt, priority }: { src: string; alt: string; priority?: boolean }) {
+  if (src.includes("supabase.co/storage/")) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt={alt} className="h-full w-full select-none rounded-lg object-cover" draggable={false} />;
+  }
+
+  return (
+    <Image
+      src={src}
+      alt={alt}
+      fill
+      className="select-none rounded-lg object-cover"
+      sizes="(min-width: 1024px) 896px, 100vw"
+      draggable={false}
+      priority={priority}
+    />
+  );
+}
+
 export function FramerGalleryCarousel({ images }: { images: CmsImage[] }) {
   const [index, setIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -47,15 +66,7 @@ export function FramerGalleryCarousel({ images }: { images: CmsImage[] }) {
           <motion.div className="flex" style={{ x }}>
             {images.map((item, itemIndex) => (
               <div key={`${item.src}-${itemIndex}`} className="relative h-[360px] w-full shrink-0 sm:h-[500px]">
-                <Image
-                  src={item.src}
-                  alt={item.alt}
-                  fill
-                  className="select-none rounded-lg object-cover"
-                  sizes="(min-width: 1024px) 896px, 100vw"
-                  draggable={false}
-                  priority={itemIndex === 0}
-                />
+                <CarouselImage src={item.src} alt={item.alt} priority={itemIndex === 0} />
                 <div className="absolute inset-0 rounded-lg bg-gradient-to-t from-black/55 via-black/5 to-transparent" />
                 <div className="absolute bottom-7 left-7 right-24 text-white">
                   <p className="text-xs uppercase tracking-[0.2em] text-white/65">

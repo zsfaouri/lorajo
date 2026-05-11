@@ -6,6 +6,15 @@ import { InteractiveGallerySelector } from "@/components/sections/interactive-ga
 import { StaggeredPhotoGallerySection } from "@/components/sections/staggered-photo-gallery-section";
 import type { CmsSection, GalleryCollectionDto } from "@/types/cms";
 
+function GalleryImage({ src, alt }: { src: string; alt: string }) {
+  if (src.includes("supabase.co/storage/")) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt={alt} className="absolute inset-0 h-full w-full object-cover" />;
+  }
+
+  return <Image src={src} alt={alt} fill className="object-cover" sizes="(min-width: 1024px) 33vw, 100vw" />;
+}
+
 export function GalleryCollectionsSection({
   section,
   collections,
@@ -41,7 +50,7 @@ export function GalleryCollectionsSection({
                   className="mb-4 break-inside-avoid overflow-hidden rounded-[var(--radius-media)] bg-white"
                 >
                   <div className={index % 3 === 0 ? "relative aspect-[4/5]" : "relative aspect-[5/4]"}>
-                    <Image src={image.src} alt={image.alt} fill className="object-cover" sizes="(min-width: 1024px) 33vw, 100vw" />
+                    <GalleryImage src={image.src} alt={image.alt} />
                   </div>
                   <figcaption className="px-4 py-3 text-sm text-black/58">{image.caption}</figcaption>
                 </figure>

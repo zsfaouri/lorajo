@@ -6,6 +6,9 @@ import { SmoothScrollProvider } from "@/components/layout/smooth-scroll-provider
 import { getFooter, getNavigation } from "@/lib/cms-data";
 import { locales, normalizeLocale } from "@/lib/cms-constants";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function LocaleLayout({
   children,
   params,

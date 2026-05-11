@@ -5,6 +5,9 @@ import { DynamicPage } from "@/components/cms/dynamic-page";
 import { getPageBySlug } from "@/lib/cms-data";
 import { normalizeLocale, normalizeSlug } from "@/lib/cms-constants";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function generateMetadata({
   params,
 }: {

@@ -1,4 +1,5 @@
 import { Locale, PublishState } from "@prisma/client";
+import { unstable_noStore as noStore } from "next/cache";
 
 import {
   fallbackFooter,
@@ -33,6 +34,7 @@ function asRecord(value: unknown): Record<string, unknown> {
 }
 
 export async function getActiveTheme(): Promise<ThemeTokens> {
+  noStore();
   const prisma = getPrisma();
   if (!prisma) return fallbackTheme;
 
@@ -45,6 +47,7 @@ export async function getActiveTheme(): Promise<ThemeTokens> {
 }
 
 export async function getNavigation(locale: LocaleCode): Promise<NavigationItemDto[]> {
+  noStore();
   const prisma = getPrisma();
   if (!prisma) return fallbackNavigation[locale];
 
@@ -67,6 +70,7 @@ export async function getNavigation(locale: LocaleCode): Promise<NavigationItemD
 }
 
 export async function getFooter(locale: LocaleCode): Promise<FooterColumnDto[]> {
+  noStore();
   const prisma = getPrisma();
   if (!prisma) return fallbackFooter[locale];
 
@@ -89,6 +93,7 @@ export async function getFooter(locale: LocaleCode): Promise<FooterColumnDto[]> 
 }
 
 export async function getMembers(locale: LocaleCode): Promise<MemberDto[]> {
+  noStore();
   const prisma = getPrisma();
   if (!prisma) return fallbackMembers;
 
@@ -123,6 +128,7 @@ export async function getMembers(locale: LocaleCode): Promise<MemberDto[]> {
 }
 
 export async function getGalleryCollections(locale: LocaleCode): Promise<GalleryCollectionDto[]> {
+  noStore();
   const prisma = getPrisma();
   if (!prisma) return fallbackGallery;
 
@@ -156,6 +162,7 @@ export async function getGalleryCollections(locale: LocaleCode): Promise<Gallery
 }
 
 export async function getPageBySlug(locale: LocaleCode, slug: string): Promise<CmsPage | null> {
+  noStore();
   const fallback = fallbackPages[locale]?.[slug] ?? fallbackPages[locale]?.home ?? null;
   const prisma = getPrisma();
   if (!prisma) return fallback;
@@ -201,6 +208,7 @@ export async function getPageBySlug(locale: LocaleCode, slug: string): Promise<C
 }
 
 export async function getPagesForAdmin() {
+  noStore();
   const prisma = getPrisma();
   if (!prisma) {
     return Object.values(fallbackPages.en).map((page) => ({

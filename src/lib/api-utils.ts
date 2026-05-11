@@ -6,11 +6,15 @@ import { auth } from "@/auth";
 import { getPrisma } from "@/lib/prisma";
 
 export function ok<T>(data: T, init?: ResponseInit) {
-  return NextResponse.json(data, init);
+  const response = NextResponse.json(data, init);
+  response.headers.set("Cache-Control", "no-store, no-cache, max-age=0, must-revalidate");
+  return response;
 }
 
 export function error(message: string, status = 400) {
-  return NextResponse.json({ error: message }, { status });
+  const response = NextResponse.json({ error: message }, { status });
+  response.headers.set("Cache-Control", "no-store, no-cache, max-age=0, must-revalidate");
+  return response;
 }
 
 export async function requireAdminApi() {

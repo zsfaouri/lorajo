@@ -103,6 +103,15 @@ function GalleryGridCell({ className, transition, index, ...props }: GalleryGrid
   );
 }
 
+function GalleryImage({ src, alt }: { src: string; alt: string }) {
+  if (src.includes("supabase.co/storage/")) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt={alt} className="absolute inset-0 h-full w-full object-cover" />;
+  }
+
+  return <Image src={src} alt={alt} fill className="object-cover" sizes="(min-width: 1024px) 280px, 50vw" />;
+}
+
 export function StaggeredPhotoGallerySection({
   section,
   collections,
@@ -199,13 +208,7 @@ export function StaggeredPhotoGallerySection({
                 <GalleryGrid>
                   {chunk.map((image, index) => (
                     <GalleryGridCell key={`${image.src}-${chunkIndex}-${index}`} index={index}>
-                      <Image
-                        src={image.src}
-                        alt={image.alt}
-                        fill
-                        className="object-cover"
-                        sizes="(min-width: 1024px) 280px, 50vw"
-                      />
+                      <GalleryImage src={image.src} alt={image.alt} />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/58 via-black/8 to-transparent" />
                       <span className="absolute bottom-3 left-3 right-3 text-xs uppercase tracking-[0.14em] text-white/84">
                         {image.caption ?? image.alt}
