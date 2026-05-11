@@ -5,6 +5,7 @@ import type { HTMLAttributes } from "react";
 import { useState } from "react";
 import { type HTMLMotionProps, type Variants, motion } from "framer-motion";
 
+import { FramerGalleryCarousel } from "@/components/sections/framer-gallery-carousel";
 import { SectionFrame } from "@/components/sections/section-frame";
 import { ResponsiveSphereImageGrid } from "@/components/sections/sphere-image-grid";
 import { cn } from "@/lib/utils";
@@ -117,6 +118,8 @@ export function StaggeredPhotoGallerySection({
       caption: image.caption ?? activeCollection.title,
     })) ?? [];
   const isFamousFigures = activeCollection?.slug === "famous-figures";
+  const isCarouselCollection =
+    activeCollection?.slug === "historical-photos" || activeCollection?.slug === "landmarks";
   const chunks = chunkImages(images, 4);
   const title = typeof section.content.title === "string" ? section.content.title : "PHOTO GALLERY";
   const subtitle =
@@ -179,6 +182,15 @@ export function StaggeredPhotoGallerySection({
               hoverScale={1.25}
               className="mx-auto"
             />
+          </ContainerAnimated>
+        ) : isCarouselCollection ? (
+          <ContainerAnimated className="rounded-[24px] border border-black/10 bg-[var(--color-parchment)] py-6 shadow-[0_30px_90px_rgba(0,0,0,0.08)] md:py-8">
+            <div className="mx-auto mb-2 max-w-4xl px-6 text-center">
+              <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-heritage-green)]">
+                {activeCollection?.title}
+              </p>
+            </div>
+            <FramerGalleryCarousel images={images} />
           </ContainerAnimated>
         ) : (
           <div className="grid gap-16 lg:grid-cols-2">
