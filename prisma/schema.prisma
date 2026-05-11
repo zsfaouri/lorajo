@@ -1,0 +1,390 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Locale {
+  EN
+  AR
+}
+
+enum PublishState {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ContactStatus {
+  NEW
+  READ
+  ARCHIVED
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+  AUDIO
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  permissions Json
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  roleId        String?
+  role          Role?     @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  accounts      Account[]
+  sessions      Session[]
+  auditLogs     AuditLog[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model SiteTheme {
+  id          String        @id @default(cuid())
+  name        String
+  isActive    Boolean       @default(false)
+  tokens      Json
+  designTokens DesignToken[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model DesignToken {
+  id        String    @id @default(cuid())
+  themeId   String
+  theme     SiteTheme @relation(fields: [themeId], references: [id], onDelete: Cascade)
+  category  String
+  key       String
+  value     String
+  label     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([themeId, key])
+}
+
+model Page {
+  id             String        @id @default(cuid())
+  locale         Locale
+  slug           String
+  title          String
+  seoTitle       String?
+  seoDescription String?
+  seoImage       String?
+  status         PublishState  @default(DRAFT)
+  publishedAt    DateTime?
+  sections       PageSection[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([locale, slug])
+}
+
+model PageSection {
+  id                String           @id @default(cuid())
+  pageId            String
+  page              Page             @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  type              String
+  variant           String
+  sortOrder         Int
+  isVisible         Boolean          @default(true)
+  content           Json
+  settings          Json
+  spacing           Json?
+  background        Json?
+  alignment         String?
+  animationPresetId String?
+  animationPreset   AnimationPreset? @relation(fields: [animationPresetId], references: [id], onDelete: SetNull)
+  blocks            SectionBlock[]
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([pageId, sortOrder])
+}
+
+model SectionBlock {
+  id        String      @id @default(cuid())
+  sectionId String
+  section   PageSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  type      String
+  sortOrder Int
+  content   Json
+  settings  Json?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([sectionId, sortOrder])
+}
+
+model NavigationItem {
+  id        String           @id @default(cuid())
+  locale    Locale
+  label     String
+  path      String
+  sortOrder Int
+  isVisible Boolean          @default(true)
+  parentId  String?
+  parent    NavigationItem?  @relation("NavigationTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children  NavigationItem[] @relation("NavigationTree")
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+
+model FooterColumn {
+  id        String   @id @default(cuid())
+  locale    Locale
+  title     String
+  sortOrder Int
+  content   Json
+  links     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Project {
+  id          String       @id @default(cuid())
+  locale      Locale
+  title       String
+  slug        String
+  summary     String?
+  content     Json
+  status      PublishState @default(DRAFT)
+  featured    Boolean      @default(false)
+  mediaAssetId String?
+  mediaAsset   MediaAsset? @relation(fields: [mediaAssetId], references: [id], onDelete: SetNull)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([locale, slug])
+}
+
+model Event {
+  id          String       @id @default(cuid())
+  locale      Locale
+  title       String
+  slug        String
+  summary     String?
+  content     Json
+  startsAt    DateTime?
+  endsAt      DateTime?
+  location    String?
+  status      PublishState @default(DRAFT)
+  mediaAssetId String?
+  mediaAsset   MediaAsset? @relation(fields: [mediaAssetId], references: [id], onDelete: SetNull)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([locale, slug])
+}
+
+model Article {
+  id          String       @id @default(cuid())
+  locale      Locale
+  title       String
+  slug        String
+  excerpt     String?
+  content     Json
+  author      String?
+  status      PublishState @default(DRAFT)
+  publishedAt DateTime?
+  mediaAssetId String?
+  mediaAsset   MediaAsset? @relation(fields: [mediaAssetId], references: [id], onDelete: SetNull)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([locale, slug])
+}
+
+model Member {
+  id          String       @id @default(cuid())
+  locale      Locale
+  name        String
+  slug        String
+  title       String?
+  bio         Json?
+  sortOrder   Int
+  isFounder   Boolean      @default(false)
+  status      PublishState @default(PUBLISHED)
+  mediaAssetId String?
+  mediaAsset   MediaAsset? @relation(fields: [mediaAssetId], references: [id], onDelete: SetNull)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([locale, slug])
+}
+
+model GalleryCollection {
+  id          String         @id @default(cuid())
+  locale      Locale
+  title       String
+  slug        String
+  description String?
+  sortOrder   Int
+  status      PublishState   @default(PUBLISHED)
+  images      GalleryImage[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@unique([locale, slug])
+}
+
+model GalleryImage {
+  id           String            @id @default(cuid())
+  collectionId String
+  collection   GalleryCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  mediaAssetId String
+  mediaAsset   MediaAsset        @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
+  caption      String?
+  alt          String
+  sortOrder    Int
+  metadata     Json?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+model MediaAsset {
+  id             String          @id @default(cuid())
+  key            String?         @unique
+  type           MediaType
+  url            String          @unique
+  secureUrl      String?
+  publicId       String?
+  alt            String?
+  caption        String?
+  width          Int?
+  height         Int?
+  bytes          Int?
+  format         String?
+  source         String?
+  metadata       Json?
+  galleryImages  GalleryImage[]
+  projects       Project[]
+  events         Event[]
+  articles       Article[]
+  members        Member[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model ContactMessage {
+  id        String        @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String?
+  message   String
+  status    ContactStatus @default(NEW)
+  metadata  Json?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  locale    Locale?
+  consent   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VolunteerApplication {
+  id        String        @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  interests Json
+  message   String?
+  status    ContactStatus @default(NEW)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+model AnimationPreset {
+  id          String        @id @default(cuid())
+  key         String        @unique
+  label       String
+  description String?
+  config      Json
+  sections    PageSection[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model ComponentVariant {
+  id          String   @id @default(cuid())
+  component   String
+  key         String
+  label       String
+  config      Json
+  isEnabled   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([component, key])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String
+  entityId  String?
+  before    Json?
+  after     Json?
+  metadata  Json?
+  createdAt DateTime @default(now())
+}
