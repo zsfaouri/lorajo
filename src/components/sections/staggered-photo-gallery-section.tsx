@@ -6,6 +6,7 @@ import { useState } from "react";
 import { type HTMLMotionProps, type Variants, motion } from "framer-motion";
 
 import { SectionFrame } from "@/components/sections/section-frame";
+import { ResponsiveSphereImageGrid } from "@/components/sections/sphere-image-grid";
 import { cn } from "@/lib/utils";
 import type { CmsImage, CmsSection, GalleryCollectionDto } from "@/types/cms";
 
@@ -115,6 +116,7 @@ export function StaggeredPhotoGallerySection({
       ...image,
       caption: image.caption ?? activeCollection.title,
     })) ?? [];
+  const isFamousFigures = activeCollection?.slug === "famous-figures";
   const chunks = chunkImages(images, 4);
   const title = typeof section.content.title === "string" ? section.content.title : "PHOTO GALLERY";
   const subtitle =
@@ -154,29 +156,55 @@ export function StaggeredPhotoGallerySection({
           ))}
         </div>
 
-        <div className="grid gap-16 lg:grid-cols-2">
-          {chunks.map((chunk, chunkIndex) => (
-            <ContainerStagger key={`gallery-chunk-${chunkIndex}`} className="mx-auto w-full max-w-[560px]">
-              <GalleryGrid>
-                {chunk.map((image, index) => (
-                  <GalleryGridCell key={`${image.src}-${chunkIndex}-${index}`} index={index}>
-                    <Image
-                      src={image.src}
-                      alt={image.alt}
-                      fill
-                      className="object-cover"
-                      sizes="(min-width: 1024px) 280px, 50vw"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/58 via-black/8 to-transparent" />
-                    <span className="absolute bottom-3 left-3 right-3 text-xs uppercase tracking-[0.14em] text-white/84">
-                      {image.caption ?? image.alt}
-                    </span>
-                  </GalleryGridCell>
-                ))}
-              </GalleryGrid>
-            </ContainerStagger>
-          ))}
-        </div>
+        {isFamousFigures ? (
+          <ContainerAnimated className="rounded-[24px] border border-black/10 bg-[var(--color-parchment)] px-4 py-10 shadow-[0_30px_90px_rgba(0,0,0,0.08)] md:px-10">
+            <div className="mb-8 flex flex-col gap-3 text-center">
+              <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-heritage-green)]">Interactive archive</p>
+              <h2 className="text-[clamp(2rem,5vw,4.5rem)] font-[var(--font-heading-weight)] uppercase leading-none">
+                Famous Figures
+              </h2>
+            </div>
+            <ResponsiveSphereImageGrid
+              images={images.map((image, index) => ({
+                id: `${activeCollection?.id ?? "famous-figures"}-${index}`,
+                src: image.src,
+                alt: image.alt,
+                title: image.caption ?? image.alt,
+                description: activeCollection?.description ?? undefined,
+              }))}
+              autoRotate
+              autoRotateSpeed={0.18}
+              dragSensitivity={0.45}
+              baseImageScale={0.13}
+              hoverScale={1.25}
+              className="mx-auto"
+            />
+          </ContainerAnimated>
+        ) : (
+          <div className="grid gap-16 lg:grid-cols-2">
+            {chunks.map((chunk, chunkIndex) => (
+              <ContainerStagger key={`gallery-chunk-${chunkIndex}`} className="mx-auto w-full max-w-[560px]">
+                <GalleryGrid>
+                  {chunk.map((image, index) => (
+                    <GalleryGridCell key={`${image.src}-${chunkIndex}-${index}`} index={index}>
+                      <Image
+                        src={image.src}
+                        alt={image.alt}
+                        fill
+                        className="object-cover"
+                        sizes="(min-width: 1024px) 280px, 50vw"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/58 via-black/8 to-transparent" />
+                      <span className="absolute bottom-3 left-3 right-3 text-xs uppercase tracking-[0.14em] text-white/84">
+                        {image.caption ?? image.alt}
+                      </span>
+                    </GalleryGridCell>
+                  ))}
+                </GalleryGrid>
+              </ContainerStagger>
+            ))}
+          </div>
+        )}
       </div>
     </SectionFrame>
   );
