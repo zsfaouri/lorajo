@@ -33,8 +33,14 @@ type ResourceItem = {
 function getValue(item: ResourceItem, key: string) {
   const value = item[key];
   if (value == null) return "";
-  if (typeof value === "object") return JSON.stringify(value);
+  if (typeof value === "object") return "";
   return String(value);
+}
+
+function entryBody(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return "";
+  const body = (value as Record<string, unknown>).body;
+  return typeof body === "string" ? body : "";
 }
 
 function normalizePayload(fields: FieldConfig[], values: Record<string, string>) {
@@ -45,11 +51,7 @@ function normalizePayload(fields: FieldConfig[], values: Record<string, string>)
     if (!value) continue;
 
     if (field.name === "content" || field.name === "settings" || field.name === "metadata") {
-      try {
-        payload[field.name] = JSON.parse(value);
-      } catch {
-        payload[field.name] = { body: value };
-      }
+      payload[field.name] = { body: value };
       continue;
     }
 
@@ -155,7 +157,7 @@ export function AdminResourceManager({
         <Card className="border-white/10 bg-white/[0.04] text-white">
           <CardHeader>
             <CardTitle>Create</CardTitle>
-            <CardDescription className="text-white/45">Fill the fields. Slugs are filled automatically from titles.</CardDescription>
+          <CardDescription className="text-white/45">Fill normal fields only. Slugs are filled automatically from titles.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={createItem} className="grid gap-4">
@@ -232,6 +234,7 @@ export function AdminResourceManager({
                 </div>
               </div>
               {item.summary ? <p className="mt-3 text-sm leading-6 text-white/52">{String(item.summary)}</p> : null}
+              {!item.summary && item.content ? <p className="mt-3 text-sm leading-6 text-white/52">{entryBody(item.content)}</p> : null}
             </div>
           ))}
         </CardContent>
