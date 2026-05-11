@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { uploadAdminImage } from "@/lib/admin-upload";
 
 type Asset = {
   id: string;
@@ -32,35 +33,30 @@ export function MediaLibraryManager({ initialAssets }: { initialAssets: Asset[] 
 
   async function upload() {
     if (!file) return;
-    setStatus("Uploading...");
-    const form = new FormData();
-    form.set("file", file);
-    form.set("alt", alt || file.name);
-
-    const response = await fetch("/api/admin/media", { method: "POST", body: form });
-    const json = await response.json();
-    if (!response.ok) {
-      setStatus(json.error ?? "Upload failed");
-      return;
+    try {
+      setStatus("Uploading...");
+      const asset = await uploadAdminImage(file, alt || file.name);
+      setAssets((current) => [asset, ...current]);
+      setFile(null);
+      setAlt("");
+      setStatus("Uploaded.");
+    } catch (caught) {
+      setStatus(caught instanceof Error ? caught.message : "Upload failed.");
     }
-    setAssets((current) => [json, ...current]);
-    setFile(null);
-    setAlt("");
-    setStatus("Uploaded");
   }
 
   return (
     <div className="grid gap-6">
       <div>
         <p className="text-xs uppercase tracking-[0.18em] text-white/40">Media Library</p>
-        <h1 className="mt-3 text-4xl font-medium">Cloudinary media control</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-white/48">Upload media and reuse URLs in section content, settings, galleries, events, projects, and members.</p>
+        <h1 className="mt-3 text-4xl font-medium">Media Library</h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-white/48">Upload images once, then use them in members, gallery albums, pages, events, and announcements.</p>
       </div>
 
       <Card className="border-white/10 bg-white/[0.04] text-white">
         <CardHeader>
           <CardTitle>Upload</CardTitle>
-          <CardDescription className="text-white/45">Requires Cloudinary environment variables.</CardDescription>
+          <CardDescription className="text-white/45">JPG, PNG, WebP, or GIF. Maximum 5 MB.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
           <Input type="file" onChange={(event) => setFile(event.target.files?.[0] ?? null)} className="border-white/15 bg-white/8 text-white" />

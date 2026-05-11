@@ -1,4 +1,5 @@
 import { MediaType } from "@prisma/client";
+import { createClient } from "@supabase/supabase-js";
 import path from "node:path";
 
 import { error, ok, requireAdminApi, requirePrisma } from "@/lib/api-utils";
@@ -24,7 +25,6 @@ export async function POST(request: Request) {
   const bytes = Buffer.from(await file.arrayBuffer());
   const prisma = requirePrisma();
   if (!prisma) return error("Database is not configured", 503);
-  if (!getCloudinary() && bytes.length > 1_500_000) return error("Image is too large. Use an image under 1.5 MB or configure Cloudinary.", 413);
 
   const cloudinary = getCloudinary();
   if (cloudinary) {
@@ -58,20 +58,35 @@ export async function POST(request: Request) {
     return ok(asset, { status: 201 });
   }
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   const extension = path.extname(file.name).toLowerCase() || (file.type.startsWith("video/") ? ".mp4" : ".jpg");
+  if (!supabaseUrl || !supabaseKey) return error("Media storage is not configured", 503);
   if (!file.type.startsWith("image/")) return error("Video uploads require Cloudinary.", 415);
-  const dataUrl = `data:${file.type};base64,${bytes.toString("base64")}`;
-  const uniqueKey = `db-upload-${Date.now()}-${file.name.replace(/[^a-z0-9-]/gi, "-").toLowerCase()}`;
+  if (bytes.length > 5_000_000) return error("Image is too large. Use an image under 5 MB.", 413);
+
+  const safeName = file.name.replace(/[^a-z0-9.-]/gi, "-").toLowerCase();
+  const storagePath = `admin/${Date.now()}-${safeName || `upload${extension}`}`;
+  const supabase = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
+  const upload = await supabase.storage.from("lora-media").upload(storagePath, bytes, {
+    contentType: file.type,
+    upsert: false,
+  });
+
+  if (upload.error) return error(upload.error.message, 502);
+  const publicUrl = supabase.storage.from("lora-media").getPublicUrl(storagePath).data.publicUrl;
 
   const asset = await prisma.mediaAsset.create({
     data: {
-      key: uniqueKey,
+      key: `supabase-${storagePath.replace(/[^a-z0-9-]/gi, "-").toLowerCase()}`,
       type: MediaType.IMAGE,
-      url: dataUrl,
+      url: publicUrl,
+      secureUrl: publicUrl,
+      publicId: storagePath,
       alt: String(form.get("alt") ?? file.name),
       bytes: bytes.length,
       format: extension.replace(".", ""),
-      source: "database upload",
+      source: "supabase storage",
       metadata: { originalName: file.name, mimeType: file.type },
     },
   });

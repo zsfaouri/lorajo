@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { uploadAdminImage, type UploadedAsset } from "@/lib/admin-upload";
 import { cn } from "@/lib/utils";
 
 type MediaAsset = {
@@ -62,7 +63,7 @@ export function GalleryAlbumManager({
 }) {
   const [collections, setCollections] = useState(initialCollections);
   const [activeId, setActiveId] = useState(initialCollections[0]?.id ?? "");
-  const [assets] = useState(mediaAssets);
+  const [assets, setAssets] = useState<MediaAsset[]>(mediaAssets);
   const [status, setStatus] = useState("");
   const [newAlbum, setNewAlbum] = useState({ title: "", slug: "", locale: "EN", description: "" });
   const active = collections.find((collection) => collection.id === activeId) ?? collections[0];
@@ -115,6 +116,19 @@ export function GalleryAlbumManager({
       ),
     );
     setStatus("Image added");
+  }
+
+  async function uploadAndAdd(file: File) {
+    if (!active) return;
+    try {
+      setStatus("Uploading image...");
+      const uploaded = await uploadAdminImage(file, active.title);
+      const asset = uploaded as UploadedAsset & MediaAsset;
+      setAssets((current) => [asset, ...current]);
+      await addImage(asset);
+    } catch (caught) {
+      setStatus(caught instanceof Error ? caught.message : "Upload failed.");
+    }
   }
 
   async function removeImage(imageId: string) {
@@ -232,9 +246,33 @@ export function GalleryAlbumManager({
             <Card className="border-white/10 bg-white/[0.04] text-white">
               <CardHeader>
                 <CardTitle>Add images</CardTitle>
-                <CardDescription className="text-white/45">Click an image to add it to this album.</CardDescription>
+                <CardDescription className="text-white/45">Upload directly into this album or click an existing image below.</CardDescription>
               </CardHeader>
-              <CardContent className="grid max-h-[720px] gap-3 overflow-auto sm:grid-cols-3 lg:grid-cols-6">
+              <CardContent className="grid gap-4">
+                <label
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    const file = event.dataTransfer.files?.[0];
+                    if (file) void uploadAndAdd(file);
+                  }}
+                  className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed border-white/20 bg-black/25 px-4 py-6 text-center text-white/55 transition hover:border-white/40 hover:text-white"
+                >
+                  <span className="text-sm font-medium">Drop image here or click to upload to {active.title}</span>
+                  <span className="mt-1 text-xs text-white/38">JPG, PNG, WebP, GIF. Max 5 MB.</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      event.target.value = "";
+                      if (file) void uploadAndAdd(file);
+                    }}
+                  />
+                </label>
+
+                <div className="grid max-h-[720px] gap-3 overflow-auto sm:grid-cols-3 lg:grid-cols-6">
                 {assets.map((asset) => (
                   <button key={asset.id} type="button" onClick={() => addImage(asset)} className="overflow-hidden rounded-md border border-white/10 bg-black/30 text-left hover:border-white/35">
                     <div className="relative aspect-square">
@@ -243,6 +281,7 @@ export function GalleryAlbumManager({
                     <span className="block truncate px-2 py-2 text-xs text-white/55">{asset.caption ?? asset.alt ?? "Image"}</span>
                   </button>
                 ))}
+                </div>
               </CardContent>
             </Card>
           </>

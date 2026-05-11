@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { uploadAdminImage } from "@/lib/admin-upload";
 import { cn } from "@/lib/utils";
 
 type MediaAsset = {
@@ -215,21 +216,15 @@ export function MemberManager({
   }
 
   async function uploadFile(file: File) {
-    setStatus("Uploading image...");
-    const form = new FormData();
-    form.set("file", file);
-    form.set("alt", activeDraft.name || file.name);
-
-    const response = await fetch("/api/admin/media", { method: "POST", body: form });
-    const json = await response.json();
-    if (!response.ok) {
-      setStatus(json.error ?? "Upload failed");
-      return;
+    try {
+      setStatus("Uploading image...");
+      const asset = await uploadAdminImage(file, activeDraft.name || file.name);
+      setAssets((current) => [asset, ...current]);
+      setActiveDraft({ mediaAssetId: asset.id });
+      setStatus("Image uploaded. Press Save to publish it on the member.");
+    } catch (caught) {
+      setStatus(caught instanceof Error ? caught.message : "Upload failed.");
     }
-
-    setAssets((current) => [json, ...current]);
-    setActiveDraft({ mediaAssetId: json.id });
-    setStatus("Image uploaded. Press Save to publish it on the member.");
   }
 
   return (
