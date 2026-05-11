@@ -17,14 +17,39 @@ export async function POST(request: Request) {
   const session = await requireAdminApi();
   if (!session) return error("Unauthorized", 401);
 
+  const contentType = request.headers.get("content-type") ?? "";
+  const prisma = requirePrisma();
+  if (!prisma) return error("Database is not configured", 503);
+
+  if (contentType.includes("application/json")) {
+    const body = await request.json();
+    const url = typeof body.url === "string" ? body.url : "";
+    if (!url || !url.startsWith("https://")) return error("Invalid media URL", 422);
+
+    const asset = await prisma.mediaAsset.create({
+      data: {
+        key: `supabase-${String(body.publicId ?? Date.now()).replace(/[^a-z0-9-]/gi, "-").toLowerCase()}`,
+        type: MediaType.IMAGE,
+        url,
+        secureUrl: url,
+        publicId: typeof body.publicId === "string" ? body.publicId : null,
+        alt: typeof body.alt === "string" ? body.alt : "Media image",
+        bytes: typeof body.bytes === "number" ? body.bytes : null,
+        format: typeof body.format === "string" ? body.format : null,
+        source: typeof body.source === "string" ? body.source : "supabase storage",
+        metadata: { uploadedBy: session.user?.id ?? null },
+      },
+    });
+
+    return ok(asset, { status: 201 });
+  }
+
   const form = await request.formData();
   const file = form.get("file");
   if (!(file instanceof File)) return error("Missing file", 422);
   if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) return error("Unsupported file type", 415);
 
   const bytes = Buffer.from(await file.arrayBuffer());
-  const prisma = requirePrisma();
-  if (!prisma) return error("Database is not configured", 503);
 
   const cloudinary = getCloudinary();
   if (cloudinary) {

@@ -1,3 +1,5 @@
+import { createClient } from "@supabase/supabase-js";
+
 export type UploadedAsset = {
   id: string;
   url?: string;
@@ -15,11 +17,38 @@ export async function uploadAdminImage(file: File, alt: string): Promise<Uploade
     throw new Error("Image is too large. Use an image under 5 MB.");
   }
 
-  const form = new FormData();
-  form.set("file", file);
-  form.set("alt", alt || file.name);
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Media storage is not configured.");
+  }
 
-  const response = await fetch("/api/admin/media", { method: "POST", body: form });
+  const safeName = file.name.replace(/[^a-z0-9.-]/gi, "-").toLowerCase();
+  const storagePath = `admin/${Date.now()}-${safeName || "upload"}`;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  const upload = await supabase.storage.from("lora-media").upload(storagePath, file, {
+    contentType: file.type,
+    upsert: false,
+  });
+
+  if (upload.error) {
+    throw new Error(upload.error.message);
+  }
+
+  const publicUrl = supabase.storage.from("lora-media").getPublicUrl(storagePath).data.publicUrl;
+
+  const response = await fetch("/api/admin/media", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      url: publicUrl,
+      publicId: storagePath,
+      alt: alt || file.name,
+      bytes: file.size,
+      format: file.name.split(".").pop()?.toLowerCase() || "",
+      source: "supabase storage",
+    }),
+  });
   const text = await response.text();
   let json: unknown = null;
 
