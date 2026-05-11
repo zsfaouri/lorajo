@@ -17,6 +17,15 @@ type MediaAsset = {
   caption?: string | null;
 };
 
+function SmartImage({ src, alt, sizes }: { src: string; alt: string; sizes: string }) {
+  if (src.startsWith("data:")) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt={alt} className="absolute inset-0 h-full w-full object-cover" />;
+  }
+
+  return <Image src={src} alt={alt} fill className="object-cover" sizes={sizes} unoptimized={src.startsWith("http")} />;
+}
+
 type GalleryImage = {
   id: string;
   alt: string;
@@ -207,7 +216,7 @@ export function GalleryAlbumManager({
                 {active.images.map((image) => (
                   <figure key={image.id} className="overflow-hidden rounded-md border border-white/10 bg-black/30">
                     <div className="relative aspect-[4/3]">
-                      <Image src={image.mediaAsset.url} alt={image.alt} fill className="object-cover" sizes="25vw" />
+                      <SmartImage src={image.mediaAsset.url} alt={image.alt} sizes="25vw" />
                     </div>
                     <figcaption className="grid gap-2 p-3">
                       <span className="truncate text-sm text-white/62">{image.caption ?? image.alt}</span>
@@ -229,7 +238,7 @@ export function GalleryAlbumManager({
                 {assets.map((asset) => (
                   <button key={asset.id} type="button" onClick={() => addImage(asset)} className="overflow-hidden rounded-md border border-white/10 bg-black/30 text-left hover:border-white/35">
                     <div className="relative aspect-square">
-                      <Image src={asset.url} alt={asset.alt ?? "Media"} fill className="object-cover" sizes="160px" />
+                      <SmartImage src={asset.url} alt={asset.alt ?? "Media"} sizes="160px" />
                     </div>
                     <span className="block truncate px-2 py-2 text-xs text-white/55">{asset.caption ?? asset.alt ?? "Image"}</span>
                   </button>

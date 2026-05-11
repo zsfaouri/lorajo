@@ -46,10 +46,20 @@ export async function listAdminMembers() {
       name: member.name,
       title: member.title,
       slug: member.slug,
+      sortOrder: member.sortOrder,
+      isFounder: true,
       status: "PUBLISHED",
+      mediaAsset: member.image
+        ? {
+            id: `${member.id}-image`,
+            url: member.image.src,
+            alt: member.image.alt,
+            caption: member.image.caption,
+          }
+        : null,
     }));
   }
-  return prisma.member.findMany({ orderBy: [{ locale: "asc" }, { sortOrder: "asc" }] });
+  return prisma.member.findMany({ include: { mediaAsset: true }, orderBy: [{ locale: "asc" }, { sortOrder: "asc" }] });
 }
 
 export async function listAdminGallery() {

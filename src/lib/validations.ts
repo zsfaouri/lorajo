@@ -72,6 +72,7 @@ export const memberSchema = z.object({
   name: z.string().min(1),
   slug: z.string().min(1),
   title: z.string().optional().nullable(),
+  mediaAssetId: z.string().min(1).optional().nullable(),
   sortOrder: z.number().int().default(0),
   isFounder: z.boolean().default(false),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).default("PUBLISHED"),

@@ -15,6 +15,15 @@ type Asset = {
   caption?: string | null;
 };
 
+function SmartImage({ src, alt }: { src: string; alt: string }) {
+  if (src.startsWith("data:")) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt={alt} className="absolute inset-0 h-full w-full object-cover" />;
+  }
+
+  return <Image src={src} alt={alt} fill className="object-cover" sizes="25vw" unoptimized={src.startsWith("http")} />;
+}
+
 export function MediaLibraryManager({ initialAssets }: { initialAssets: Asset[] }) {
   const [assets, setAssets] = useState(initialAssets);
   const [file, setFile] = useState<File | null>(null);
@@ -76,7 +85,7 @@ export function MediaLibraryManager({ initialAssets }: { initialAssets: Asset[] 
             return (
               <figure key={asset.id ?? src} className="overflow-hidden rounded-md border border-white/10 bg-black/30">
                 <div className="relative aspect-[4/3]">
-                  {src ? <Image src={src} alt={asset.alt ?? "Media asset"} fill className="object-cover" sizes="25vw" /> : null}
+                  {src ? <SmartImage src={src} alt={asset.alt ?? "Media asset"} /> : null}
                 </div>
                 <figcaption className="grid gap-1 p-3 text-sm text-white/60">
                   <span>{asset.caption ?? asset.alt ?? "Untitled asset"}</span>

@@ -1,6 +1,4 @@
 import { MediaType } from "@prisma/client";
-import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { error, ok, requireAdminApi, requirePrisma } from "@/lib/api-utils";
@@ -26,6 +24,7 @@ export async function POST(request: Request) {
   const bytes = Buffer.from(await file.arrayBuffer());
   const prisma = requirePrisma();
   if (!prisma) return error("Database is not configured", 503);
+  if (!getCloudinary() && bytes.length > 1_500_000) return error("Image is too large. Use an image under 1.5 MB or configure Cloudinary.", 413);
 
   const cloudinary = getCloudinary();
   if (cloudinary) {
@@ -59,22 +58,20 @@ export async function POST(request: Request) {
     return ok(asset, { status: 201 });
   }
 
-  const uploadId = randomUUID();
   const extension = path.extname(file.name).toLowerCase() || (file.type.startsWith("video/") ? ".mp4" : ".jpg");
-  const fileName = `${uploadId}${extension}`;
-  const uploadDir = path.join(process.cwd(), "public", "lora", "uploads");
-  await mkdir(uploadDir, { recursive: true });
-  await writeFile(path.join(uploadDir, fileName), bytes);
+  if (!file.type.startsWith("image/")) return error("Video uploads require Cloudinary.", 415);
+  const dataUrl = `data:${file.type};base64,${bytes.toString("base64")}`;
+  const uniqueKey = `db-upload-${Date.now()}-${file.name.replace(/[^a-z0-9-]/gi, "-").toLowerCase()}`;
 
   const asset = await prisma.mediaAsset.create({
     data: {
-      key: `local-upload-${uploadId}`,
-      type: file.type.startsWith("video/") ? MediaType.VIDEO : MediaType.IMAGE,
-      url: `/api/uploads/${fileName}`,
+      key: uniqueKey,
+      type: MediaType.IMAGE,
+      url: dataUrl,
       alt: String(form.get("alt") ?? file.name),
       bytes: bytes.length,
       format: extension.replace(".", ""),
-      source: "local upload",
+      source: "database upload",
       metadata: { originalName: file.name, mimeType: file.type },
     },
   });

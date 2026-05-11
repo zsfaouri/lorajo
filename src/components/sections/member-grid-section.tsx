@@ -41,6 +41,15 @@ function getTeamMembers(members: MemberDto[]): TeamMember[] {
   }));
 }
 
+function MemberImage({ src, alt }: { src: string; alt: string }) {
+  if (src.startsWith("data:")) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt={alt} className="h-full w-full object-cover transition-[filter,transform] duration-500" />;
+  }
+
+  return <Image src={src} alt={alt} fill sizes="180px" className="object-cover transition-[filter,transform] duration-500" />;
+}
+
 export function MemberGridSection({ section, members }: { section: CmsSection; members: MemberDto[] }) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const teamMembers = getTeamMembers(members);
@@ -146,17 +155,15 @@ function PhotoCard({
       onMouseLeave={() => onHover(null)}
     >
       {member.image ? (
-        <Image
-          src={member.image}
-          alt={member.name}
-          fill
-          sizes="180px"
-          className="object-cover transition-[filter,transform] duration-500"
+        <div
+          className="absolute inset-0"
           style={{
             filter: isActive ? "grayscale(0) brightness(1)" : "grayscale(1) brightness(0.77)",
             transform: isActive ? "scale(1.04)" : "scale(1)",
           }}
-        />
+        >
+          <MemberImage src={member.image} alt={member.name} />
+        </div>
       ) : (
         <div
           className="flex h-full w-full items-center justify-center bg-[var(--color-stone)] text-3xl font-semibold text-black/38 transition-[filter] duration-500"
