@@ -379,7 +379,7 @@ export function GalleryAlbumManager({
                   className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed border-white/20 bg-black/25 px-4 py-6 text-center text-white/55 transition hover:border-white/40 hover:text-white"
                 >
                   <span className="text-sm font-medium">Drop images here or click to upload to {active.title}</span>
-                  <span className="mt-1 text-xs text-white/38">JPG, PNG, WebP, GIF. Max 50 MB.</span>
+                  <span className="mt-1 text-xs text-white/38">JPG, PNG, WebP, GIF. Storage provider limits still apply.</span>
                   <input
                     type="file"
                     multiple

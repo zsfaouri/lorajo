@@ -9,15 +9,9 @@ export type UploadedAsset = {
   metadata?: unknown;
 };
 
-const MAX_ADMIN_IMAGE_UPLOAD_BYTES = 50 * 1024 * 1024;
-
 export async function uploadAdminImage(file: File, alt: string, category = ""): Promise<UploadedAsset> {
   if (!file.type.startsWith("image/")) {
     throw new Error("Use an image file: JPG, PNG, WebP, or GIF.");
-  }
-
-  if (file.size > MAX_ADMIN_IMAGE_UPLOAD_BYTES) {
-    throw new Error("Image is too large. Use an image under 50 MB.");
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -35,7 +29,10 @@ export async function uploadAdminImage(file: File, alt: string, category = ""): 
   });
 
   if (upload.error) {
-    throw new Error(upload.error.message);
+    const message = upload.error.message.includes("maximum allowed size")
+      ? "Storage rejected this file because the Supabase bucket or plan size limit is too low. Raise the Supabase Storage global and bucket file size limits, or connect a large-file media provider."
+      : upload.error.message;
+    throw new Error(message);
   }
 
   const publicUrl = supabase.storage.from("lora-media").getPublicUrl(storagePath).data.publicUrl;

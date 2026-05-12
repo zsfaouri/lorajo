@@ -5,8 +5,6 @@ import path from "node:path";
 import { error, ok, requireAdminApi, requirePrisma } from "@/lib/api-utils";
 import { getCloudinary } from "@/lib/media";
 
-const MAX_ADMIN_IMAGE_UPLOAD_BYTES = 50 * 1024 * 1024;
-
 export async function GET() {
   const session = await requireAdminApi();
   if (!session) return error("Unauthorized", 401);
@@ -93,7 +91,6 @@ export async function POST(request: Request) {
   const extension = path.extname(file.name).toLowerCase() || (file.type.startsWith("video/") ? ".mp4" : ".jpg");
   if (!supabaseUrl || !supabaseKey) return error("Media storage is not configured", 503);
   if (!file.type.startsWith("image/")) return error("Video uploads require Cloudinary.", 415);
-  if (bytes.length > MAX_ADMIN_IMAGE_UPLOAD_BYTES) return error("Image is too large. Use an image under 50 MB.", 413);
 
   const safeName = file.name.replace(/[^a-z0-9.-]/gi, "-").toLowerCase();
   const storagePath = `admin/${Date.now()}-${safeName || `upload${extension}`}`;
@@ -103,7 +100,12 @@ export async function POST(request: Request) {
     upsert: false,
   });
 
-  if (upload.error) return error(upload.error.message, 502);
+  if (upload.error) {
+    const message = upload.error.message.includes("maximum allowed size")
+      ? "Storage rejected this file because the Supabase bucket or plan size limit is too low. Raise the Supabase Storage global and bucket file size limits, or connect a large-file media provider."
+      : upload.error.message;
+    return error(message, 502);
+  }
   const publicUrl = supabase.storage.from("lora-media").getPublicUrl(storagePath).data.publicUrl;
 
   const asset = await prisma.mediaAsset.create({
