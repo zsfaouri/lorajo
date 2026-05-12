@@ -38,6 +38,7 @@ export function MediaLibraryManager({ initialAssets }: { initialAssets: Asset[] 
   const [files, setFiles] = useState<File[]>([]);
   const [alt, setAlt] = useState("");
   const [category, setCategory] = useState("");
+  const [driveUrl, setDriveUrl] = useState("");
   const [filter, setFilter] = useState("All");
   const [status, setStatus] = useState("");
   const categories = ["All", ...Array.from(new Set(assets.map(getCategory))).sort()];
@@ -57,6 +58,31 @@ export function MediaLibraryManager({ initialAssets }: { initialAssets: Asset[] 
       setStatus(`Uploaded ${uploaded.length} image${uploaded.length === 1 ? "" : "s"}.`);
     } catch (caught) {
       setStatus(caught instanceof Error ? caught.message : "Upload failed.");
+    }
+  }
+
+  async function addDriveLink() {
+    if (!driveUrl.trim()) return;
+    try {
+      setStatus("Adding Google Drive image...");
+      const response = await fetch("/api/admin/media", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: driveUrl.trim(),
+          alt: alt || "Google Drive image",
+          category,
+          source: "google drive link",
+        }),
+      });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json.error ?? "Could not add Google Drive image.");
+      setAssets((current) => [json, ...current]);
+      setDriveUrl("");
+      setAlt("");
+      setStatus("Google Drive image added.");
+    } catch (caught) {
+      setStatus(caught instanceof Error ? caught.message : "Google Drive link failed.");
     }
   }
 
@@ -89,6 +115,21 @@ export function MediaLibraryManager({ initialAssets }: { initialAssets: Asset[] 
             </Button>
             <span className="text-sm text-white/45">{status}</span>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-white/10 bg-white/[0.04] text-white">
+        <CardHeader>
+          <CardTitle>Add from Google Drive</CardTitle>
+          <CardDescription className="text-white/45">Paste a shared Google Drive image file link. Folder links are only for organizing files in Drive.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-[1.4fr_0.7fr_0.7fr_auto] md:items-end">
+          <Input value={driveUrl} onChange={(event) => setDriveUrl(event.target.value)} placeholder="Google Drive image file link" className="border-white/15 bg-white/8 text-white" />
+          <Input value={alt} onChange={(event) => setAlt(event.target.value)} placeholder="Alt text" className="border-white/15 bg-white/8 text-white" />
+          <Input value={category} onChange={(event) => setCategory(event.target.value)} placeholder="Category" className="border-white/15 bg-white/8 text-white" />
+          <Button type="button" variant="admin" onClick={addDriveLink}>
+            Add Link
+          </Button>
         </CardContent>
       </Card>
 

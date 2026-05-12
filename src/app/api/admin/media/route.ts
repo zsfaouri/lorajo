@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { error, ok, requireAdminApi, requirePrisma } from "@/lib/api-utils";
 import { uploadToGoogleDrive } from "@/lib/google-drive";
+import { isGoogleDriveFolderUrl, toGoogleDriveImageUrl } from "@/lib/google-drive-url";
 import { getCloudinary } from "@/lib/media";
 
 export async function GET() {
@@ -26,20 +27,22 @@ export async function POST(request: Request) {
     const body = await request.json();
     const url = typeof body.url === "string" ? body.url : "";
     if (!url || !url.startsWith("https://")) return error("Invalid media URL", 422);
+    if (isGoogleDriveFolderUrl(url)) return error("Paste a Google Drive image file link, not a folder link.", 422);
     const category = typeof body.category === "string" ? body.category.trim() : "";
+    const mediaUrl = toGoogleDriveImageUrl(url);
 
     const asset = await prisma.mediaAsset.create({
       data: {
         key: `supabase-${String(body.publicId ?? Date.now()).replace(/[^a-z0-9-]/gi, "-").toLowerCase()}`,
         type: MediaType.IMAGE,
-        url,
-        secureUrl: url,
+        url: mediaUrl,
+        secureUrl: mediaUrl,
         publicId: typeof body.publicId === "string" ? body.publicId : null,
         alt: typeof body.alt === "string" ? body.alt : "Media image",
         bytes: typeof body.bytes === "number" ? body.bytes : null,
         format: typeof body.format === "string" ? body.format : null,
-        source: typeof body.source === "string" ? body.source : "supabase storage",
-        metadata: { uploadedBy: session.user?.id ?? null, category: category || null },
+        source: typeof body.source === "string" ? body.source : url.includes("drive.google.com") ? "google drive link" : "external url",
+        metadata: { uploadedBy: session.user?.id ?? null, category: category || null, originalUrl: url },
       },
     });
 
