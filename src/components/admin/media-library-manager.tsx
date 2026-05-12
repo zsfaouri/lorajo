@@ -71,7 +71,7 @@ export function MediaLibraryManager({ initialAssets }: { initialAssets: Asset[] 
       <Card className="border-white/10 bg-white/[0.04] text-white">
         <CardHeader>
           <CardTitle>Bulk upload</CardTitle>
-          <CardDescription className="text-white/45">JPG, PNG, WebP, or GIF. Maximum 5 MB per image.</CardDescription>
+          <CardDescription className="text-white/45">JPG, PNG, WebP, or GIF. Maximum 50 MB per image.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-[1.2fr_0.8fr_0.8fr_auto] md:items-end">
           <Input

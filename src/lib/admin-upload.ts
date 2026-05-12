@@ -9,13 +9,15 @@ export type UploadedAsset = {
   metadata?: unknown;
 };
 
+const MAX_ADMIN_IMAGE_UPLOAD_BYTES = 50 * 1024 * 1024;
+
 export async function uploadAdminImage(file: File, alt: string, category = ""): Promise<UploadedAsset> {
   if (!file.type.startsWith("image/")) {
     throw new Error("Use an image file: JPG, PNG, WebP, or GIF.");
   }
 
-  if (file.size > 5_000_000) {
-    throw new Error("Image is too large. Use an image under 5 MB.");
+  if (file.size > MAX_ADMIN_IMAGE_UPLOAD_BYTES) {
+    throw new Error("Image is too large. Use an image under 50 MB.");
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
