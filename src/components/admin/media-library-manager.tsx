@@ -159,9 +159,9 @@ export function MediaLibraryManager({ initialAssets }: { initialAssets: Asset[] 
 
           <div className="grid gap-4 md:grid-cols-[1fr_220px_auto] md:items-end">
             <Input value={alt} onChange={(event) => setAlt(event.target.value)} placeholder={selected?.name ?? "Alt text"} className="border-white/15 bg-white/8 text-white" />
-            <select value={category} onChange={(event) => setCategory(event.target.value)} className="h-10 rounded-md border border-white/15 bg-black px-3 text-sm text-white">
+            <select value={category} onChange={(event) => setCategory(event.target.value)} className="h-10 rounded-md border border-white/15 bg-white px-3 text-sm text-black">
               {categoryOptions.map((option) => (
-                <option key={option.value} value={option.value}>
+                <option key={option.value} value={option.value} className="bg-white text-black">
                   {option.label}
                 </option>
               ))}

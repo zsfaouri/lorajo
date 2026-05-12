@@ -76,7 +76,7 @@ async function listPublicGoogleDriveFolder(folderId: string): Promise<DriveBrows
   if (!response.ok) throw new Error("Could not read the public Google Drive folder.");
 
   const html = await response.text();
-  const entries = html.match(/<div class="flip-entry"[\s\S]*?<\/div><\/div><\/div>/g) ?? [];
+  const entries = html.split('<div class="flip-entry"').slice(1);
 
   return entries
     .map((entry) => {
@@ -100,8 +100,11 @@ async function listPublicGoogleDriveFolder(folderId: string): Promise<DriveBrows
 }
 
 export async function listGoogleDriveFolder(folderId = getRootFolderId()): Promise<DriveBrowserItem[]> {
+  const publicItems = await listPublicGoogleDriveFolder(folderId);
+  if (publicItems.length > 0) return publicItems;
+
   const drive = getDriveClient();
-  if (!drive) return listPublicGoogleDriveFolder(folderId);
+  if (!drive) return [];
 
   const response = await drive.files.list({
     q: `'${folderId.replace(/'/g, "\\'")}' in parents and trashed = false and (mimeType = 'application/vnd.google-apps.folder' or mimeType contains 'image/')`,
@@ -140,7 +143,7 @@ export async function makeGoogleDriveFilePublic(fileId: string) {
     });
   } catch (caught) {
     const message = caught instanceof Error ? caught.message : "";
-    if (!message.includes("already exists")) throw caught;
+    if (!message.includes("already exists")) return;
   }
 }
 
