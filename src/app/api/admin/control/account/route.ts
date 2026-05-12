@@ -4,7 +4,7 @@ import { z } from "zod";
 import { error, ok, parseJson, requireAdminApi, requirePrisma } from "@/lib/api-utils";
 
 const schema = z.object({
-  email: z.string().email(),
+  email: z.string().email().optional(),
   password: z.string().min(8).optional(),
 });
 
@@ -17,12 +17,13 @@ export async function PUT(request: Request) {
 
   const { data, response } = await parseJson(request, schema);
   if (response) return response;
+  if (!data.email && !data.password) return error("Enter an email or password to save.", 422);
 
   const passwordHash = data.password ? await bcrypt.hash(data.password, 12) : undefined;
   await prisma.user.update({
     where: { id: session.user.id },
     data: {
-      email: data.email,
+      ...(data.email ? { email: data.email } : {}),
       ...(passwordHash ? { passwordHash } : {}),
     },
   });

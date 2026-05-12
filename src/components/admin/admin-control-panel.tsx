@@ -41,21 +41,44 @@ export function AdminControlPanel({
 }) {
   const [email, setEmail] = useState(currentEmail);
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [social, setSocial] = useState(socialLinks);
   const [userRoles, setUserRoles] = useState<Record<string, string>>(Object.fromEntries(users.map((user) => [user.id, user.roleId ?? ""])));
   const [status, setStatus] = useState("");
   const assignedRoleIds = new Set(Object.values(userRoles).filter(Boolean));
 
-  async function saveAccount() {
-    setStatus("Saving account...");
+  async function saveEmail() {
+    setStatus("Saving email...");
     const response = await fetch("/api/admin/control/account", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password: password || undefined }),
+      body: JSON.stringify({ email }),
     });
     const json = await response.json();
-    setStatus(response.ok ? "Account saved. Sign in again if the email or password changed." : json.error ?? "Save failed.");
-    if (response.ok) setPassword("");
+    setStatus(response.ok ? "Email saved. Sign in again with the new email." : json.error ?? "Save failed.");
+  }
+
+  async function savePassword() {
+    if (password.length < 8) {
+      setStatus("Password must be at least 8 characters.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setStatus("Passwords do not match.");
+      return;
+    }
+    setStatus("Saving password...");
+    const response = await fetch("/api/admin/control/account", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    const json = await response.json();
+    setStatus(response.ok ? "Password saved. Sign in again with the new password." : json.error ?? "Save failed.");
+    if (response.ok) {
+      setPassword("");
+      setConfirmPassword("");
+    }
   }
 
   async function saveSocialLinks() {
@@ -91,12 +114,24 @@ export function AdminControlPanel({
       <div className="grid gap-6 xl:grid-cols-2">
         <Card className="border-white/10 bg-white/[0.04] text-white">
           <CardHeader>
-            <CardTitle>Login email and password</CardTitle>
-            <CardDescription className="text-white/45">Changes apply to the current admin account.</CardDescription>
+            <CardTitle>Login email</CardTitle>
+            <CardDescription className="text-white/45">Change the email for the current admin account.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
             <Label className="text-white/55">Email</Label>
             <Input value={email} onChange={(event) => setEmail(event.target.value)} className="border-white/15 bg-white/8 text-white" />
+            <Button type="button" variant="admin" onClick={saveEmail}>
+              Save email
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="border-white/10 bg-white/[0.04] text-white">
+          <CardHeader>
+            <CardTitle>Change password</CardTitle>
+            <CardDescription className="text-white/45">Use at least 8 characters. Save password separately from email.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4">
             <Label className="text-white/55">New password</Label>
             <Input
               value={password}
@@ -105,8 +140,16 @@ export function AdminControlPanel({
               placeholder="Leave blank to keep current password"
               className="border-white/15 bg-white/8 text-white"
             />
-            <Button type="button" variant="admin" onClick={saveAccount}>
-              Save login
+            <Label className="text-white/55">Confirm new password</Label>
+            <Input
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              type="password"
+              placeholder="Type the new password again"
+              className="border-white/15 bg-white/8 text-white"
+            />
+            <Button type="button" variant="admin" onClick={savePassword}>
+              Save password
             </Button>
           </CardContent>
         </Card>
