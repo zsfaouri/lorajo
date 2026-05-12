@@ -121,7 +121,7 @@ export function MediaLibraryManager({ initialAssets }: { initialAssets: Asset[] 
                 <figcaption className="grid gap-1 p-3 text-sm text-white/60">
                   <span>{asset.caption ?? asset.alt ?? "Untitled asset"}</span>
                   <span className="text-xs uppercase tracking-[0.12em] text-white/35">{getCategory(asset)}</span>
-                  <code className="truncate text-xs text-white/35">{src}</code>
+                  <span className="text-xs text-white/35">Stored in media cloud</span>
                 </figcaption>
               </figure>
             );

@@ -662,7 +662,7 @@ function SelectedImages({ images, onChange }: { images: string[]; onChange: (pat
             <Image src={src} alt="" fill className="object-cover" sizes="220px" />
           </div>
           <figcaption className="grid gap-2 p-3">
-            <code className="truncate text-xs text-white/40">{src}</code>
+            <span className="truncate text-xs text-white/40">Selected image {index + 1}</span>
             <div className="flex gap-2">
               <Button type="button" variant="outline" size="sm" onClick={() => onChange(images.filter((_, itemIndex) => itemIndex !== index))}>
                 Remove

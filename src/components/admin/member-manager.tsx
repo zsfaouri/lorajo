@@ -294,7 +294,7 @@ export function MemberManager({
         <Card className="border-white/10 bg-white/[0.04] text-white">
           <CardHeader>
             <CardTitle>{selected ? `Edit ${selected.name}` : "Create member"}</CardTitle>
-            <CardDescription className="text-white/45">All fields are normal form controls. No JSON.</CardDescription>
+            <CardDescription className="text-white/45">All fields are normal form controls.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6 lg:grid-cols-[320px_1fr]">
             <section className="grid content-start gap-4">

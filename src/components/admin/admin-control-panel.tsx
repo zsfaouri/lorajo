@@ -44,6 +44,7 @@ export function AdminControlPanel({
   const [social, setSocial] = useState(socialLinks);
   const [userRoles, setUserRoles] = useState<Record<string, string>>(Object.fromEntries(users.map((user) => [user.id, user.roleId ?? ""])));
   const [status, setStatus] = useState("");
+  const assignedRoleIds = new Set(Object.values(userRoles).filter(Boolean));
 
   async function saveAccount() {
     setStatus("Saving account...");
@@ -137,7 +138,7 @@ export function AdminControlPanel({
       <Card className="border-white/10 bg-white/[0.04] text-white">
         <CardHeader>
           <CardTitle>Access permissions</CardTitle>
-          <CardDescription className="text-white/45">Assign each admin user a role. Role permission JSON is shown for clarity.</CardDescription>
+          <CardDescription className="text-white/45">Assign each admin user a role with the dropdown.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3">
           {users.map((user) => (
@@ -165,12 +166,19 @@ export function AdminControlPanel({
           ))}
 
           <div className="grid gap-2 pt-4">
-            {roles.map((role) => (
-              <div key={role.id} className="rounded-md border border-white/10 bg-black/20 p-3">
-                <p className="text-sm font-medium">{role.name}</p>
-                <code className="mt-2 block whitespace-pre-wrap text-xs text-white/45">{JSON.stringify(role.permissions, null, 2)}</code>
-              </div>
-            ))}
+            <p className="text-sm font-medium">Available roles</p>
+            <div className="flex flex-wrap gap-2">
+              {roles.map((role) => (
+                <span
+                  key={role.id}
+                  className={`rounded-full border px-3 py-1 text-xs ${
+                    assignedRoleIds.has(role.id) ? "border-[var(--color-heritage-green)] text-[var(--color-heritage-green)]" : "border-white/10 text-white/45"
+                  }`}
+                >
+                  {role.name}
+                </span>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
