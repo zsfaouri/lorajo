@@ -1,5 +1,3 @@
-import { createClient } from "@supabase/supabase-js";
-
 export type UploadedAsset = {
   id: string;
   url?: string;
@@ -14,41 +12,14 @@ export async function uploadAdminImage(file: File, alt: string, category = ""): 
     throw new Error("Use an image file: JPG, PNG, WebP, or GIF.");
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Media storage is not configured.");
-  }
-
-  const safeName = file.name.replace(/[^a-z0-9.-]/gi, "-").toLowerCase();
-  const storagePath = `admin/${Date.now()}-${safeName || "upload"}`;
-  const supabase = createClient(supabaseUrl, supabaseKey);
-  const upload = await supabase.storage.from("lora-media").upload(storagePath, file, {
-    contentType: file.type,
-    upsert: false,
-  });
-
-  if (upload.error) {
-    const message = upload.error.message.includes("maximum allowed size")
-      ? "Storage rejected this file because the Supabase bucket or plan size limit is too low. Raise the Supabase Storage global and bucket file size limits, or connect a large-file media provider."
-      : upload.error.message;
-    throw new Error(message);
-  }
-
-  const publicUrl = supabase.storage.from("lora-media").getPublicUrl(storagePath).data.publicUrl;
+  const form = new FormData();
+  form.append("file", file);
+  form.append("alt", alt || file.name);
+  form.append("category", category);
 
   const response = await fetch("/api/admin/media", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      url: publicUrl,
-      publicId: storagePath,
-      alt: alt || file.name,
-      category,
-      bytes: file.size,
-      format: file.name.split(".").pop()?.toLowerCase() || "",
-      source: "supabase storage",
-    }),
+    body: form,
   });
   const text = await response.text();
   let json: unknown = null;

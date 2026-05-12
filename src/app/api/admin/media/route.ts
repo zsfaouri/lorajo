@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import path from "node:path";
 
 import { error, ok, requireAdminApi, requirePrisma } from "@/lib/api-utils";
+import { uploadToGoogleDrive } from "@/lib/google-drive";
 import { getCloudinary } from "@/lib/media";
 
 export async function GET() {
@@ -52,6 +53,28 @@ export async function POST(request: Request) {
   if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) return error("Unsupported file type", 415);
 
   const bytes = Buffer.from(await file.arrayBuffer());
+  const extension = path.extname(file.name).toLowerCase() || (file.type.startsWith("video/") ? ".mp4" : ".jpg");
+  const safeName = file.name.replace(/[^a-z0-9.-]/gi, "-").toLowerCase() || `upload${extension}`;
+
+  const googleDriveUpload = await uploadToGoogleDrive({ fileName: `${Date.now()}-${safeName}`, mimeType: file.type, bytes });
+  if (googleDriveUpload) {
+    const asset = await prisma.mediaAsset.create({
+      data: {
+        key: `google-drive-${googleDriveUpload.publicId.replace(/[^a-z0-9-]/gi, "-").toLowerCase()}`,
+        type: file.type.startsWith("video/") ? MediaType.VIDEO : MediaType.IMAGE,
+        url: googleDriveUpload.url,
+        secureUrl: googleDriveUpload.url,
+        publicId: googleDriveUpload.publicId,
+        alt: String(form.get("alt") ?? file.name),
+        bytes: bytes.length,
+        format: extension.replace(".", ""),
+        source: "google drive",
+        metadata: { originalName: file.name, mimeType: file.type, category: category || null },
+      },
+    });
+
+    return ok(asset, { status: 201 });
+  }
 
   const cloudinary = getCloudinary();
   if (cloudinary) {
@@ -88,11 +111,9 @@ export async function POST(request: Request) {
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  const extension = path.extname(file.name).toLowerCase() || (file.type.startsWith("video/") ? ".mp4" : ".jpg");
   if (!supabaseUrl || !supabaseKey) return error("Media storage is not configured", 503);
   if (!file.type.startsWith("image/")) return error("Video uploads require Cloudinary.", 415);
 
-  const safeName = file.name.replace(/[^a-z0-9.-]/gi, "-").toLowerCase();
   const storagePath = `admin/${Date.now()}-${safeName || `upload${extension}`}`;
   const supabase = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
   const upload = await supabase.storage.from("lora-media").upload(storagePath, bytes, {
