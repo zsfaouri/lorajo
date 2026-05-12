@@ -65,7 +65,9 @@ export function MediaLibraryManager({ initialAssets }: { initialAssets: Asset[] 
 
   async function loadFolder(nextFolderId = "") {
     setStatus("Loading Google Drive...");
-    const response = await fetch(nextFolderId ? `/api/admin/drive?folderId=${encodeURIComponent(nextFolderId)}` : "/api/admin/drive");
+    const params = new URLSearchParams({ refresh: String(Date.now()) });
+    if (nextFolderId) params.set("folderId", nextFolderId);
+    const response = await fetch(`/api/admin/drive?${params.toString()}`, { cache: "no-store" });
     const json = await response.json();
     if (!response.ok) {
       setStatus(json.error ?? "Could not load Google Drive.");
@@ -137,6 +139,9 @@ export function MediaLibraryManager({ initialAssets }: { initialAssets: Asset[] 
           <div className="flex flex-wrap items-center gap-3">
             <Button type="button" variant="outline" onClick={goBack} disabled={folderStack.length === 0}>
               Back
+            </Button>
+            <Button type="button" variant="outline" onClick={() => void loadFolder(folderId)}>
+              Refresh Drive
             </Button>
             <span className="text-sm text-white/45">{status || `${driveItems.length} Drive items`}</span>
           </div>

@@ -69,9 +69,17 @@ function getFileIdFromHref(href: string) {
   return href.match(/\/file\/d\/([^/]+)/)?.[1] ?? href.match(/\/drive\/folders\/([^/?#"]+)/)?.[1] ?? "";
 }
 
-async function listPublicGoogleDriveFolder(folderId: string): Promise<DriveBrowserItem[]> {
-  const response = await fetch(`https://drive.google.com/embeddedfolderview?id=${encodeURIComponent(folderId)}#grid`, {
+async function listPublicGoogleDriveFolder(folderId: string, refreshKey = ""): Promise<DriveBrowserItem[]> {
+  const url = new URL("https://drive.google.com/embeddedfolderview");
+  url.searchParams.set("id", folderId);
+  url.searchParams.set("_", refreshKey || String(Date.now()));
+
+  const response = await fetch(`${url.toString()}#grid`, {
     cache: "no-store",
+    headers: {
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+    },
   });
   if (!response.ok) throw new Error("Could not read the public Google Drive folder.");
 
@@ -99,8 +107,8 @@ async function listPublicGoogleDriveFolder(folderId: string): Promise<DriveBrows
     .filter((item): item is DriveBrowserItem => Boolean(item));
 }
 
-export async function listGoogleDriveFolder(folderId = getRootFolderId()): Promise<DriveBrowserItem[]> {
-  const publicItems = await listPublicGoogleDriveFolder(folderId);
+export async function listGoogleDriveFolder(folderId = getRootFolderId(), refreshKey = ""): Promise<DriveBrowserItem[]> {
+  const publicItems = await listPublicGoogleDriveFolder(folderId, refreshKey);
   if (publicItems.length > 0) return publicItems;
 
   const drive = getDriveClient();
