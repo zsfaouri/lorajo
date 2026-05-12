@@ -127,6 +127,7 @@ async function listPublicGoogleDriveFolder(folderId: string, refreshKey = ""): P
 
   const response = await fetch(`${url.toString()}#grid`, {
     cache: "no-store",
+    signal: AbortSignal.timeout(15_000),
     headers: {
       "Cache-Control": "no-cache",
       Pragma: "no-cache",
@@ -162,30 +163,7 @@ export async function listGoogleDriveFolder(folderId = getRootFolderId(), refres
   const publicItems = await listPublicGoogleDriveFolder(folderId, refreshKey).catch(() => []);
   if (publicItems.length > 0) return publicItems;
   if (folderId === DEFAULT_GOOGLE_DRIVE_FOLDER_ID) return KNOWN_ROOT_FOLDERS;
-
-  const drive = getDriveClient();
-  if (!drive) return [];
-
-  const response = await drive.files.list({
-    q: `'${folderId.replace(/'/g, "\\'")}' in parents and trashed = false and (mimeType = 'application/vnd.google-apps.folder' or mimeType contains 'image/')`,
-    fields: "files(id,name,mimeType,webViewLink,thumbnailLink)",
-    orderBy: "folder,name_natural",
-    pageSize: 200,
-    supportsAllDrives: true,
-    includeItemsFromAllDrives: true,
-  });
-
-  return (response.data.files ?? []).map((file) => {
-    const isFolder = file.mimeType === "application/vnd.google-apps.folder";
-    return {
-      id: file.id ?? "",
-      name: file.name ?? "Untitled",
-      mimeType: file.mimeType ?? "",
-      type: isFolder ? "folder" : "image",
-      url: file.webViewLink ?? null,
-      thumbnailUrl: isFolder || !file.id ? null : googleDriveImageUrl(file.id),
-    };
-  });
+  return [];
 }
 
 export async function makeGoogleDriveFilePublic(fileId: string) {
