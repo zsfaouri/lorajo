@@ -9,6 +9,7 @@ import {
   fallbackPages,
   fallbackTheme,
 } from "@/lib/fallback-data";
+import { listGoogleDriveFolder } from "@/lib/google-drive";
 import { getPrisma } from "@/lib/prisma";
 import { isRecord } from "@/lib/utils";
 import type {
@@ -32,6 +33,69 @@ function toLocaleCode(locale: Locale): LocaleCode {
 
 function asRecord(value: unknown): Record<string, unknown> {
   return isRecord(value) ? value : {};
+}
+
+function slugifyDriveName(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function driveCollectionTitle(name: string) {
+  return name
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function driveCaption(fileName: string) {
+  return fileName
+    .replace(/\.[a-z0-9]+$/i, "")
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function canonicalDriveSlug(name: string) {
+  const slug = slugifyDriveName(name);
+  if (["famous", "famous-figures", "famous-figuers"].includes(slug)) return "famous-figures";
+  if (["historical-pics", "historical-photos", "history"].includes(slug)) return "historical-photos";
+  if (["founders", "founding-members"].includes(slug)) return "founding-members";
+  if (["hero", "hero-pics", "hero-pictures"].includes(slug)) return "hero-pics";
+  return slug || "drive-folder";
+}
+
+async function getDriveGalleryCollections(): Promise<GalleryCollectionDto[]> {
+  const rootItems = await listGoogleDriveFolder();
+  const folders = rootItems.filter((item) => item.type === "folder");
+  const collections = await Promise.all(
+    folders.map(async (folder, index) => {
+      const images = (await listGoogleDriveFolder(folder.id))
+        .filter((item) => item.type === "image" && item.thumbnailUrl)
+        .map((item) => {
+          const caption = driveCaption(item.name);
+          return {
+            src: item.thumbnailUrl ?? "",
+            alt: caption || item.name,
+            caption: caption || item.name,
+          };
+        });
+
+      return {
+        id: `drive-${folder.id}`,
+        title: driveCollectionTitle(folder.name),
+        slug: canonicalDriveSlug(folder.name),
+        description: `Google Drive folder: ${folder.name}`,
+        sortOrder: index + 1,
+        images,
+      };
+    }),
+  );
+
+  return collections.filter((collection) => collection.images.length > 0);
 }
 
 export async function getActiveTheme(): Promise<ThemeTokens> {
@@ -176,6 +240,9 @@ export async function getEvents(locale: LocaleCode): Promise<EventDto[]> {
 
 export async function getGalleryCollections(locale: LocaleCode): Promise<GalleryCollectionDto[]> {
   noStore();
+  const driveCollections = await getDriveGalleryCollections().catch(() => []);
+  if (driveCollections.length > 0) return driveCollections;
+
   const prisma = getPrisma();
   if (!prisma) return fallbackGallery;
 
