@@ -17,6 +17,7 @@ type MediaAsset = {
 
 type HeroSection = {
   id: string;
+  isStarter?: boolean;
   pageTitle: string;
   pageSlug: string;
   locale: string;
@@ -100,7 +101,7 @@ export function HeroPicsManager({
 
   async function save(section: HeroSection) {
     setStatus((current) => ({ ...current, [section.id]: "Saving..." }));
-    const response = await fetch(`/api/admin/sections/${section.id}`, {
+    const response = await fetch(`/api/admin/hero-pics/${section.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -127,6 +128,17 @@ export function HeroPicsManager({
       </div>
 
       <div className="grid gap-5">
+        {sections.length === 0 ? (
+          <Card className="border-white/10 bg-white/[0.04] text-white">
+            <CardHeader>
+              <CardTitle>No hero sections found</CardTitle>
+              <CardDescription className="text-white/45">
+                No CMS pages exist in the database yet. Create or seed a page first, then hero pictures will appear here.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        ) : null}
+
         {sections.map((section) => {
           const images = sectionImages(section);
           return (
@@ -137,6 +149,7 @@ export function HeroPicsManager({
                     <CardTitle>{section.pageTitle}</CardTitle>
                     <CardDescription className="text-white/45">
                       {section.locale} / {section.pageSlug || "home"} / {section.title || "Hero section"}
+                      {section.isStarter ? " / starter content" : ""}
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-3">
