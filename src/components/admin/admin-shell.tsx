@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   CalendarDays,
+  Images,
   ContactRound,
   FileText,
   GalleryHorizontalEnd,
@@ -25,6 +26,7 @@ import { cn } from "@/lib/utils";
 const nav = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { label: "Create New Page", href: "/admin/pages", icon: FileText },
+  { label: "Hero Pics", href: "/admin/hero-pics", icon: Images },
   { label: "Who We Are", href: "/admin/who-we-are", icon: ContactRound },
   { label: "Photo Gallery", href: "/admin/gallery", icon: GalleryHorizontalEnd },
   { label: "Media Cloud", href: "/admin/media", icon: Library },
