@@ -4,6 +4,57 @@ import { google } from "googleapis";
 
 export const DEFAULT_GOOGLE_DRIVE_FOLDER_ID = "1JPsc0Lp5TbxU6AoO093NVgyJYaYVmK6v";
 
+const KNOWN_ROOT_FOLDERS: DriveBrowserItem[] = [
+  {
+    id: "1EmcGth08yrQgkc5A6VgaBElbEqB3XRoq",
+    name: "famous",
+    mimeType: "application/vnd.google-apps.folder",
+    type: "folder",
+    url: "https://drive.google.com/drive/folders/1EmcGth08yrQgkc5A6VgaBElbEqB3XRoq",
+    thumbnailUrl: null,
+  },
+  {
+    id: "1gHayhyCYM2SYY5jkhdh29cLdreYbKmDa",
+    name: "founders",
+    mimeType: "application/vnd.google-apps.folder",
+    type: "folder",
+    url: "https://drive.google.com/drive/folders/1gHayhyCYM2SYY5jkhdh29cLdreYbKmDa",
+    thumbnailUrl: null,
+  },
+  {
+    id: "1FCkE90m-ZhDfTjcK8EX5gGs1mP6C7bTx",
+    name: "hero",
+    mimeType: "application/vnd.google-apps.folder",
+    type: "folder",
+    url: "https://drive.google.com/drive/folders/1FCkE90m-ZhDfTjcK8EX5gGs1mP6C7bTx",
+    thumbnailUrl: null,
+  },
+  {
+    id: "1eWXlLTs1YziUJV_2BqknAq102gw_Eik_",
+    name: "historical pics",
+    mimeType: "application/vnd.google-apps.folder",
+    type: "folder",
+    url: "https://drive.google.com/drive/folders/1eWXlLTs1YziUJV_2BqknAq102gw_Eik_",
+    thumbnailUrl: null,
+  },
+  {
+    id: "140eAQqvm1BS_vN1NA-YWGGI3TTK7uXI_",
+    name: "landmarks",
+    mimeType: "application/vnd.google-apps.folder",
+    type: "folder",
+    url: "https://drive.google.com/drive/folders/140eAQqvm1BS_vN1NA-YWGGI3TTK7uXI_",
+    thumbnailUrl: null,
+  },
+  {
+    id: "1ShI6iijKIBaEOuClc5W0sXRCNOYga3Lp",
+    name: "pics",
+    mimeType: "application/vnd.google-apps.folder",
+    type: "folder",
+    url: "https://drive.google.com/drive/folders/1ShI6iijKIBaEOuClc5W0sXRCNOYga3Lp",
+    thumbnailUrl: null,
+  },
+];
+
 type DriveUploadInput = {
   fileName: string;
   mimeType: string;
@@ -108,8 +159,9 @@ async function listPublicGoogleDriveFolder(folderId: string, refreshKey = ""): P
 }
 
 export async function listGoogleDriveFolder(folderId = getRootFolderId(), refreshKey = ""): Promise<DriveBrowserItem[]> {
-  const publicItems = await listPublicGoogleDriveFolder(folderId, refreshKey);
+  const publicItems = await listPublicGoogleDriveFolder(folderId, refreshKey).catch(() => []);
   if (publicItems.length > 0) return publicItems;
+  if (folderId === DEFAULT_GOOGLE_DRIVE_FOLDER_ID) return KNOWN_ROOT_FOLDERS;
 
   const drive = getDriveClient();
   if (!drive) return [];
