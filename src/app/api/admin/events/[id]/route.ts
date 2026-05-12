@@ -8,6 +8,9 @@ const eventSchema = contentEntrySchema.extend({
   startsAt: z.string().datetime().optional().nullable(),
   endsAt: z.string().datetime().optional().nullable(),
   location: z.string().optional().nullable(),
+  imageUrl: z.string().min(1).optional().nullable(),
+  imageAlt: z.string().optional().nullable(),
+  actionLabel: z.string().optional().nullable(),
 });
 
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -19,14 +22,25 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
   const { data, response } = await parseJson(request, eventSchema.partial());
   if (response) return response;
 
+  const { imageUrl, imageAlt, actionLabel, content, ...eventData } = data;
+  const nextContent =
+    content || imageUrl || imageAlt || actionLabel
+      ? {
+          ...(content ?? {}),
+          ...(imageUrl ? { imageUrl } : {}),
+          ...(imageAlt ? { imageAlt } : {}),
+          ...(actionLabel ? { actionLabel } : {}),
+        }
+      : undefined;
+
   const event = await prisma.event.update({
     where: { id },
     data: {
-      ...data,
-      content: data.content ? jsonInput(data.content) : undefined,
-      status: data.status as PublishState | undefined,
-      startsAt: data.startsAt ? new Date(data.startsAt) : undefined,
-      endsAt: data.endsAt ? new Date(data.endsAt) : undefined,
+      ...eventData,
+      content: nextContent ? jsonInput(nextContent) : undefined,
+      status: eventData.status as PublishState | undefined,
+      startsAt: eventData.startsAt ? new Date(eventData.startsAt) : undefined,
+      endsAt: eventData.endsAt ? new Date(eventData.endsAt) : undefined,
     },
   });
   await prisma.auditLog.create({ data: { userId: session.user?.id, action: "update", entity: "Event", entityId: id } });

@@ -66,7 +66,15 @@ export function GalleryAlbumManager({
   const [assets, setAssets] = useState<MediaAsset[]>(mediaAssets);
   const [status, setStatus] = useState("");
   const [newAlbum, setNewAlbum] = useState({ title: "", slug: "", locale: "EN", description: "" });
+  const [imageText, setImageText] = useState<Record<string, { alt: string; caption: string }>>(
+    Object.fromEntries(
+      initialCollections.flatMap((collection) =>
+        collection.images.map((image) => [image.id, { alt: image.alt, caption: image.caption ?? "" }]),
+      ),
+    ),
+  );
   const active = collections.find((collection) => collection.id === activeId) ?? collections[0];
+  const isFamousFigures = active?.slug === "famous-figures";
 
   async function createAlbum() {
     setStatus("Creating album...");
@@ -115,20 +123,59 @@ export function GalleryAlbumManager({
         collection.id === active.id ? { ...collection, images: [...collection.images, json] } : collection,
       ),
     );
+    setImageText((current) => ({ ...current, [json.id]: { alt: json.alt, caption: json.caption ?? "" } }));
     setStatus("Image added");
+  }
+
+  async function saveImageText(imageId: string) {
+    const nextText = imageText[imageId];
+    if (!nextText) return;
+    setStatus("Saving image text...");
+    const response = await fetch(`/api/admin/gallery/images/${imageId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(nextText),
+    });
+    const json = await response.json();
+    if (!response.ok) {
+      setStatus(json.error ?? "Save failed");
+      return;
+    }
+    setCollections((current) =>
+      current.map((collection) =>
+        collection.id === active?.id
+          ? {
+              ...collection,
+              images: collection.images.map((image) =>
+                image.id === imageId ? { ...image, alt: json.alt, caption: json.caption } : image,
+              ),
+            }
+          : collection,
+      ),
+    );
+    setStatus("Image text saved");
   }
 
   async function uploadAndAdd(file: File) {
     if (!active) return;
     try {
       setStatus("Uploading image...");
-      const uploaded = await uploadAdminImage(file, active.title);
+      const uploaded = await uploadAdminImage(file, active.title, active.title);
       const asset = uploaded as UploadedAsset & MediaAsset;
       setAssets((current) => [asset, ...current]);
       await addImage(asset);
     } catch (caught) {
       setStatus(caught instanceof Error ? caught.message : "Upload failed.");
     }
+  }
+
+  async function uploadManyAndAdd(files: File[]) {
+    if (!active || files.length === 0) return;
+    for (const [index, file] of files.entries()) {
+      setStatus(`Uploading ${index + 1} / ${files.length} to ${active.title}...`);
+      await uploadAndAdd(file);
+    }
+    setStatus(`Uploaded ${files.length} image${files.length === 1 ? "" : "s"} to ${active.title}`);
   }
 
   async function removeImage(imageId: string) {
@@ -224,22 +271,96 @@ export function GalleryAlbumManager({
             <Card className="border-white/10 bg-white/[0.04] text-white">
               <CardHeader>
                 <CardTitle>{active.title}</CardTitle>
-                <CardDescription className="text-white/45">{active.description}</CardDescription>
+                <CardDescription className="text-white/45">
+                  {isFamousFigures ? "Famous Figures text editor: each picture has its own name/title and text." : active.description}
+                </CardDescription>
               </CardHeader>
-              <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {active.images.map((image) => (
-                  <figure key={image.id} className="overflow-hidden rounded-md border border-white/10 bg-black/30">
-                    <div className="relative aspect-[4/3]">
-                      <SmartImage src={image.mediaAsset.url} alt={image.alt} sizes="25vw" />
-                    </div>
-                    <figcaption className="grid gap-2 p-3">
-                      <span className="truncate text-sm text-white/62">{image.caption ?? image.alt}</span>
-                      <Button type="button" variant="outline" size="sm" onClick={() => removeImage(image.id)}>
-                        Remove
-                      </Button>
-                    </figcaption>
-                  </figure>
-                ))}
+              <CardContent className={isFamousFigures ? "grid gap-4" : "grid gap-4 sm:grid-cols-2 lg:grid-cols-4"}>
+                {active.images.map((image) =>
+                  isFamousFigures ? (
+                    <article key={image.id} className="grid gap-4 rounded-md border border-white/10 bg-black/30 p-4 md:grid-cols-[180px_1fr]">
+                      <div className="relative aspect-[4/3] overflow-hidden rounded-md">
+                        <SmartImage src={image.mediaAsset.url} alt={image.alt} sizes="180px" />
+                      </div>
+                      <div className="grid gap-3">
+                        <div className="grid gap-2">
+                          <Label className="text-white/55">Name or title</Label>
+                          <Input
+                            value={imageText[image.id]?.alt ?? image.alt}
+                            onChange={(event) =>
+                              setImageText((current) => ({
+                                ...current,
+                                [image.id]: { alt: event.target.value, caption: current[image.id]?.caption ?? image.caption ?? "" },
+                              }))
+                            }
+                            placeholder="Famous figure name"
+                            className="border-white/15 bg-white/8 text-white"
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label className="text-white/55">Text for this famous figure</Label>
+                          <Textarea
+                            value={imageText[image.id]?.caption ?? image.caption ?? ""}
+                            onChange={(event) =>
+                              setImageText((current) => ({
+                                ...current,
+                                [image.id]: { alt: current[image.id]?.alt ?? image.alt, caption: event.target.value },
+                              }))
+                            }
+                            placeholder="Write the text shown when this picture is opened."
+                            className="min-h-28 border-white/15 bg-white/8 text-white"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button type="button" variant="admin" size="sm" onClick={() => saveImageText(image.id)}>
+                            Save text
+                          </Button>
+                          <Button type="button" variant="outline" size="sm" onClick={() => removeImage(image.id)}>
+                            Remove
+                          </Button>
+                        </div>
+                      </div>
+                    </article>
+                  ) : (
+                    <figure key={image.id} className="overflow-hidden rounded-md border border-white/10 bg-black/30">
+                      <div className="relative aspect-[4/3]">
+                        <SmartImage src={image.mediaAsset.url} alt={image.alt} sizes="25vw" />
+                      </div>
+                      <figcaption className="grid gap-3 p-3">
+                        <Input
+                          value={imageText[image.id]?.alt ?? image.alt}
+                          onChange={(event) =>
+                            setImageText((current) => ({
+                              ...current,
+                              [image.id]: { alt: event.target.value, caption: current[image.id]?.caption ?? image.caption ?? "" },
+                            }))
+                          }
+                          placeholder="Name or title"
+                          className="border-white/15 bg-white/8 text-white"
+                        />
+                        <Textarea
+                          value={imageText[image.id]?.caption ?? image.caption ?? ""}
+                          onChange={(event) =>
+                            setImageText((current) => ({
+                              ...current,
+                              [image.id]: { alt: current[image.id]?.alt ?? image.alt, caption: event.target.value },
+                            }))
+                          }
+                          placeholder="Text for this picture"
+                          className="min-h-24 border-white/15 bg-white/8 text-white"
+                        />
+                        <div className="flex gap-2">
+                          <Button type="button" variant="admin" size="sm" onClick={() => saveImageText(image.id)}>
+                            Save text
+                          </Button>
+                          <Button type="button" variant="outline" size="sm" onClick={() => removeImage(image.id)}>
+                            Remove
+                          </Button>
+                        </div>
+                      </figcaption>
+                    </figure>
+                  ),
+                )}
               </CardContent>
             </Card>
 
@@ -253,21 +374,21 @@ export function GalleryAlbumManager({
                   onDragOver={(event) => event.preventDefault()}
                   onDrop={(event) => {
                     event.preventDefault();
-                    const file = event.dataTransfer.files?.[0];
-                    if (file) void uploadAndAdd(file);
+                    void uploadManyAndAdd(Array.from(event.dataTransfer.files ?? []));
                   }}
                   className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed border-white/20 bg-black/25 px-4 py-6 text-center text-white/55 transition hover:border-white/40 hover:text-white"
                 >
-                  <span className="text-sm font-medium">Drop image here or click to upload to {active.title}</span>
+                  <span className="text-sm font-medium">Drop images here or click to upload to {active.title}</span>
                   <span className="mt-1 text-xs text-white/38">JPG, PNG, WebP, GIF. Max 5 MB.</span>
                   <input
                     type="file"
+                    multiple
                     accept="image/*"
                     className="hidden"
                     onChange={(event) => {
-                      const file = event.target.files?.[0];
+                      const files = Array.from(event.target.files ?? []);
                       event.target.value = "";
-                      if (file) void uploadAndAdd(file);
+                      void uploadManyAndAdd(files);
                     }}
                   />
                 </label>

@@ -1,4 +1,5 @@
 import { ContactSection } from "@/components/sections/contact-section";
+import { EventListSection } from "@/components/sections/event-list-section";
 import { GalleryCollectionsSection } from "@/components/sections/gallery-collections-section";
 import { GalleryGridSection } from "@/components/sections/gallery-grid-section";
 import { HeritageStorySection } from "@/components/sections/heritage-story-section";
@@ -10,7 +11,7 @@ import { RichTextSection } from "@/components/sections/rich-text-section";
 import { SectionFrame } from "@/components/sections/section-frame";
 import { TextMarqueeSection } from "@/components/sections/text-marquee-section";
 import { VideoScrollHeroSection } from "@/components/sections/video-scroll-hero-section";
-import { getGalleryCollections, getMembers } from "@/lib/cms-data";
+import { getEvents, getGalleryCollections, getMembers } from "@/lib/cms-data";
 import type { CmsSection, LocaleCode } from "@/types/cms";
 
 export async function SectionRenderer({ section, locale }: { section: CmsSection; locale: LocaleCode }) {
@@ -37,6 +38,10 @@ export async function SectionRenderer({ section, locale }: { section: CmsSection
     case "member_grid": {
       const members = await getMembers(locale);
       return <MemberGridSection section={section} members={members} />;
+    }
+    case "event_list": {
+      const events = await getEvents(locale);
+      return <EventListSection section={section} events={events} />;
     }
     case "newsletter_signup":
       return <NewsletterSection section={section} />;

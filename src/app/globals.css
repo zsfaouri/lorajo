@@ -90,3 +90,33 @@ select {
 .section-large {
   padding-block: var(--space-section-large);
 }
+
+.admin-theme [class*="border-white/"] {
+  border-color: rgb(10 10 10 / 0.1) !important;
+}
+
+.admin-theme [class*="bg-[#080808]"],
+.admin-theme [class*="bg-[#0b0b0b]"],
+.admin-theme [class*="bg-[#0d0d0d]"],
+.admin-theme [class*="bg-[#151515]"] {
+  background-color: var(--color-soft-white) !important;
+}
+
+.admin-theme [class*="bg-white/"],
+.admin-theme [class*="bg-white["],
+.admin-theme [class*="bg-black/"] {
+  background-color: rgb(255 255 255 / 0.72) !important;
+}
+
+.admin-theme [class*="text-white/"] {
+  color: rgb(10 10 10 / 0.58) !important;
+}
+
+.admin-theme .text-white:not(.admin-active) {
+  color: var(--color-black) !important;
+}
+
+.admin-theme .admin-active,
+.admin-theme .admin-active svg {
+  color: white !important;
+}

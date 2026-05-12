@@ -8,6 +8,9 @@ const eventSchema = contentEntrySchema.extend({
   startsAt: z.string().datetime().optional().nullable(),
   endsAt: z.string().datetime().optional().nullable(),
   location: z.string().optional().nullable(),
+  imageUrl: z.string().min(1).optional().nullable(),
+  imageAlt: z.string().optional().nullable(),
+  actionLabel: z.string().optional().nullable(),
 });
 
 export async function GET() {
@@ -26,13 +29,19 @@ export async function POST(request: Request) {
   const { data, response } = await parseJson(request, eventSchema);
   if (response) return response;
 
+  const { imageUrl, imageAlt, actionLabel, content, ...eventData } = data;
   const event = await prisma.event.create({
     data: {
-      ...data,
-      content: jsonInput(data.content),
-      status: data.status as PublishState,
-      startsAt: data.startsAt ? new Date(data.startsAt) : null,
-      endsAt: data.endsAt ? new Date(data.endsAt) : null,
+      ...eventData,
+      content: jsonInput({
+        ...content,
+        ...(imageUrl ? { imageUrl } : {}),
+        ...(imageAlt ? { imageAlt } : {}),
+        ...(actionLabel ? { actionLabel } : {}),
+      }),
+      status: eventData.status as PublishState,
+      startsAt: eventData.startsAt ? new Date(eventData.startsAt) : null,
+      endsAt: eventData.endsAt ? new Date(eventData.endsAt) : null,
     },
   });
   await prisma.auditLog.create({ data: { userId: session.user?.id, action: "create", entity: "Event", entityId: event.id } });

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Facebook, Instagram, Mail } from "lucide-react";
+import { Facebook, Instagram, Linkedin, Mail, Twitter } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { FooterColumnDto, NavigationItemDto } from "@/types/cms";
@@ -21,6 +21,13 @@ type SocialLink = {
 
 function getString(value: unknown, fallback = "") {
   return typeof value === "string" ? value : fallback;
+}
+
+function getSocialString(content: Record<string, unknown>, key: string) {
+  const socialLinks = content.socialLinks;
+  if (!socialLinks || typeof socialLinks !== "object" || Array.isArray(socialLinks)) return "";
+  const value = (socialLinks as Record<string, unknown>)[key];
+  return typeof value === "string" ? value : "";
 }
 
 function getNavLinks(navigation: NavigationItemDto[], columns: FooterColumnDto[]): FooterLink[] {
@@ -43,7 +50,10 @@ export function PublicFooter({
   className?: string;
 }) {
   const primary = columns[0];
-  const content = primary?.content ?? {};
+  const content =
+    primary?.content && typeof primary.content === "object" && !Array.isArray(primary.content)
+      ? (primary.content as Record<string, unknown>)
+      : {};
   const brandName = primary?.title ?? "LORA";
   const brandDescription = getString(content.text, "Luweibdeh old residents association");
   const email = getString(content.email, "info@lorajo.org");
@@ -55,11 +65,13 @@ export function PublicFooter({
     { icon: <Mail className="h-full w-full" />, href: `mailto:${email}`, label: "Email" },
     {
       icon: <Instagram className="h-full w-full" />,
-      href: "https://www.instagram.com/lora.amman?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==",
+      href: getSocialString(content, "instagram") || "https://www.instagram.com/lora.amman?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==",
       label: "Instagram",
     },
-    { icon: <Facebook className="h-full w-full" />, href: "https://www.facebook.com/lora.amman", label: "Facebook" },
-  ];
+    { icon: <Facebook className="h-full w-full" />, href: getSocialString(content, "facebook") || "https://www.facebook.com/lora.amman", label: "Facebook" },
+    { icon: <Linkedin className="h-full w-full" />, href: getSocialString(content, "linkedin"), label: "LinkedIn" },
+    { icon: <Twitter className="h-full w-full" />, href: getSocialString(content, "x"), label: "X" },
+  ].filter((link) => link.href);
 
   return (
     <section className={cn("relative mt-0 w-full overflow-hidden", className)}>

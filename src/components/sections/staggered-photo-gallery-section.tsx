@@ -181,8 +181,8 @@ export function StaggeredPhotoGallerySection({
                 id: `${activeCollection?.id ?? "famous-figures"}-${index}`,
                 src: image.src,
                 alt: image.alt,
-                title: image.caption ?? image.alt,
-                description: activeCollection?.description ?? undefined,
+                title: image.alt,
+                description: image.caption ?? image.alt,
               }))}
               autoRotate
               autoRotateSpeed={0.18}

@@ -78,3 +78,16 @@ export type GalleryCollectionDto = {
   sortOrder: number;
   images: CmsImage[];
 };
+
+export type EventDto = {
+  id: string;
+  title: string;
+  slug: string;
+  summary?: string | null;
+  body?: string | null;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  location?: string | null;
+  actionLabel?: string | null;
+  image?: CmsImage | null;
+};

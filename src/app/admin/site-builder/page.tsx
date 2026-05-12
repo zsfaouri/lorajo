@@ -14,14 +14,14 @@ export default async function SiteBuilderPage() {
     <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
       <section className="grid gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-white/40">Site Builder</p>
-          <h1 className="mt-3 text-4xl font-medium">Pages and sections</h1>
+          <p className="text-xs uppercase tracking-[0.18em] text-white/40">Page Builder</p>
+          <h1 className="mt-3 text-4xl font-medium">Create and edit pages</h1>
         </div>
         <Card className="border-white/10 bg-white/[0.04] text-white">
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>Page manager</CardTitle>
-            <Button variant="admin" size="sm">
-              New page
+            <Button asChild variant="admin" size="sm">
+              <Link href="/admin/pages">New page</Link>
             </Button>
           </CardHeader>
           <CardContent className="grid gap-3">
@@ -36,11 +36,16 @@ export default async function SiteBuilderPage() {
                   </div>
                   <Badge className="border-white/15 text-white/55">{page.status}</Badge>
                 </div>
-                <div className="mt-4 flex items-center justify-between text-sm text-white/45">
+                <div className="mt-4 flex items-center justify-between gap-4 text-sm text-white/45">
                   <span>{page.sections} sections</span>
-                  <Link href={`/${page.locale}/${page.slug === "home" ? "" : page.slug}`} className="text-white">
-                    Preview
-                  </Link>
+                  <div className="flex gap-3">
+                    <Link href={`/admin/pages/${page.id}`} className="text-white">
+                      Edit
+                    </Link>
+                    <Link href={`/${page.locale}/${page.slug === "home" ? "" : page.slug}`} className="text-white">
+                      Preview
+                    </Link>
+                  </div>
                 </div>
               </div>
             ))}

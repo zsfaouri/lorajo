@@ -13,6 +13,7 @@ import { getPrisma } from "@/lib/prisma";
 import { isRecord } from "@/lib/utils";
 import type {
   CmsPage,
+  EventDto,
   FooterColumnDto,
   GalleryCollectionDto,
   LocaleCode,
@@ -124,6 +125,52 @@ export async function getMembers(locale: LocaleCode): Promise<MemberDto[]> {
     }));
   } catch {
     return fallbackMembers;
+  }
+}
+
+export async function getEvents(locale: LocaleCode): Promise<EventDto[]> {
+  noStore();
+  const prisma = getPrisma();
+  if (!prisma) return [];
+
+  try {
+    const events = await prisma.event.findMany({
+      where: { locale: toPrismaLocale(locale), status: PublishState.PUBLISHED },
+      include: { mediaAsset: true },
+      orderBy: { startsAt: "asc" },
+    });
+
+    return events.map((event) => {
+      const content = asRecord(event.content);
+      const imageUrl = typeof content.imageUrl === "string" ? content.imageUrl : null;
+      const imageAlt = typeof content.imageAlt === "string" ? content.imageAlt : event.title;
+
+      return {
+        id: event.id,
+        title: event.title,
+        slug: event.slug,
+        summary: event.summary,
+        body: typeof content.body === "string" ? content.body : null,
+        startsAt: event.startsAt?.toISOString() ?? null,
+        endsAt: event.endsAt?.toISOString() ?? null,
+        location: event.location,
+        actionLabel: typeof content.actionLabel === "string" ? content.actionLabel : null,
+        image: event.mediaAsset
+          ? {
+              src: event.mediaAsset.url,
+              alt: event.mediaAsset.alt ?? event.title,
+              caption: event.mediaAsset.caption ?? undefined,
+            }
+          : imageUrl
+            ? {
+                src: imageUrl,
+                alt: imageAlt,
+              }
+            : null,
+      };
+    });
+  } catch {
+    return [];
   }
 }
 

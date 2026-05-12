@@ -6,9 +6,10 @@ export type UploadedAsset = {
   src?: string;
   alt?: string | null;
   caption?: string | null;
+  metadata?: unknown;
 };
 
-export async function uploadAdminImage(file: File, alt: string): Promise<UploadedAsset> {
+export async function uploadAdminImage(file: File, alt: string, category = ""): Promise<UploadedAsset> {
   if (!file.type.startsWith("image/")) {
     throw new Error("Use an image file: JPG, PNG, WebP, or GIF.");
   }
@@ -44,6 +45,7 @@ export async function uploadAdminImage(file: File, alt: string): Promise<Uploade
       url: publicUrl,
       publicId: storagePath,
       alt: alt || file.name,
+      category,
       bytes: file.size,
       format: file.name.split(".").pop()?.toLowerCase() || "",
       source: "supabase storage",

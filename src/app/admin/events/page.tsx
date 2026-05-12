@@ -20,6 +20,9 @@ export default async function AdminEventsPage() {
         { name: "location", label: "Location" },
         { name: "startsAt", label: "Starts at", type: "datetime" },
         { name: "endsAt", label: "Ends at", type: "datetime" },
+        { name: "imageUrl", label: "Image URL", placeholder: "Paste an image URL from Media Library or another source." },
+        { name: "imageAlt", label: "Image alt text" },
+        { name: "actionLabel", label: "Action label", placeholder: "View details" },
         { name: "content", label: "Event details", type: "textarea", placeholder: "Write the event details here." },
         statusField,
       ]}

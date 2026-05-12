@@ -1,26 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
-import { BadgeCheck, Instagram, Linkedin, Twitter } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 
-import { SectionFrame } from "@/components/sections/section-frame";
-import { cn } from "@/lib/utils";
 import type { CmsSection, MemberDto } from "@/types/cms";
 
-type TeamMember = {
-  id: string;
+type Testimonial = {
+  quote: string;
   name: string;
-  role: string;
-  image: string | null;
-  initials: string;
-  social?: {
-    twitter?: string;
-    linkedin?: string;
-    instagram?: string;
-    behance?: string;
-  };
+  designation: string;
+  src: string;
 };
+
+const placeholderBase = "https://placehold.co/500x500/e2e8f0/64748b";
 
 function getInitials(name: string) {
   return name
@@ -31,222 +24,182 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-function getTeamMembers(members: MemberDto[]): TeamMember[] {
+function getText(content: CmsSection["content"], key: string, fallback: string) {
+  const value = content[key];
+  return typeof value === "string" && value.trim() ? value : fallback;
+}
+
+function getTestimonials(members: MemberDto[], quote: string): Testimonial[] {
   return members.map((member) => ({
-    id: member.id,
+    quote,
     name: member.name,
-    role: member.title ?? "Founding member",
-    image: member.image?.src ?? null,
-    initials: getInitials(member.name),
+    designation: member.title ?? "Founding member",
+    src: member.image?.src ?? `${placeholderBase}?text=${encodeURIComponent(getInitials(member.name))}`,
   }));
 }
 
-function MemberImage({ src, alt }: { src: string; alt: string }) {
-  if (src.startsWith("data:")) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={src} alt={alt} className="h-full w-full object-cover transition-[filter,transform] duration-500" />;
-  }
+const AnimatedTestimonials = ({
+  testimonials,
+  autoplay = true,
+}: {
+  testimonials: Testimonial[];
+  autoplay?: boolean;
+}) => {
+  const [active, setActive] = useState(0);
 
-  return <Image src={src} alt={alt} fill sizes="180px" className="object-cover transition-[filter,transform] duration-500" />;
+  const handleNext = useCallback(() => {
+    setActive((prev) => (prev + 1) % testimonials.length);
+  }, [testimonials.length]);
+
+  const handlePrev = () => {
+    setActive((prev) => (prev - 1 + testimonials.length) % testimonials.length);
+  };
+
+  useEffect(() => {
+    if (!autoplay || testimonials.length < 2) return;
+    const interval = setInterval(handleNext, 5000);
+    return () => clearInterval(interval);
+  }, [autoplay, handleNext, testimonials.length]);
+
+  useEffect(() => {
+    setActive((current) => Math.min(current, testimonials.length - 1));
+  }, [testimonials.length]);
+
+  if (!testimonials.length) return null;
+
+  const isActive = (index: number) => index === active;
+  const randomRotate = () => `${Math.floor(Math.random() * 16) - 8}deg`;
+
+  return (
+    <div className="mx-auto max-w-sm px-4 py-20 font-sans antialiased md:max-w-4xl md:px-8 lg:px-12">
+      <div className="relative grid grid-cols-1 gap-y-12 md:grid-cols-2 md:gap-x-20">
+        <div className="flex items-center justify-center">
+          <div className="relative h-80 w-full max-w-xs">
+            <AnimatePresence>
+              {testimonials.map((testimonial, index) => (
+                <motion.div
+                  key={`${testimonial.src}-${testimonial.name}`}
+                  initial={{ opacity: 0, scale: 0.9, y: 50, rotate: randomRotate() }}
+                  animate={{
+                    opacity: isActive(index) ? 1 : 0.5,
+                    scale: isActive(index) ? 1 : 0.9,
+                    y: isActive(index) ? 0 : 20,
+                    zIndex: isActive(index) ? testimonials.length : testimonials.length - Math.abs(index - active),
+                    rotate: isActive(index) ? "0deg" : randomRotate(),
+                  }}
+                  exit={{ opacity: 0, scale: 0.9, y: -50 }}
+                  transition={{ duration: 0.5, ease: "easeInOut" }}
+                  className="absolute inset-0 origin-bottom"
+                  style={{ perspective: "1000px" }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={testimonial.src}
+                    alt={testimonial.name}
+                    width={500}
+                    height={500}
+                    draggable={false}
+                    className="h-full w-full rounded-3xl object-cover shadow-2xl"
+                    onError={(event) => {
+                      event.currentTarget.src = `${placeholderBase}?text=${encodeURIComponent(testimonial.name.charAt(0))}`;
+                      event.currentTarget.onerror = null;
+                    }}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        <div className="flex flex-col justify-center py-4">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={active}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="flex flex-col justify-between"
+            >
+              <div>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-50">{testimonials[active].name}</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">{testimonials[active].designation}</p>
+                <motion.p className="mt-8 text-lg text-slate-700 dark:text-slate-300">
+                  &quot;{testimonials[active].quote}&quot;
+                </motion.p>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+          {testimonials.length > 1 ? (
+            <div className="flex gap-4 pt-12">
+              <button
+                type="button"
+                onClick={handlePrev}
+                aria-label="Previous testimonial"
+                className="group flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 transition-colors hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 dark:bg-slate-800 dark:hover:bg-slate-700 dark:focus:ring-slate-500"
+              >
+                <ArrowLeft className="h-5 w-5 text-slate-800 transition-transform duration-300 group-hover:-translate-x-1 dark:text-slate-300" />
+              </button>
+              <button
+                type="button"
+                onClick={handleNext}
+                aria-label="Next testimonial"
+                className="group flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 transition-colors hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 dark:bg-slate-800 dark:hover:bg-slate-700 dark:focus:ring-slate-500"
+              >
+                <ArrowRight className="h-5 w-5 text-slate-800 transition-transform duration-300 group-hover:translate-x-1 dark:text-slate-300" />
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+function AnimatedTestimonialsDemo({ testimonials }: { testimonials: Testimonial[] }) {
+  return <AnimatedTestimonials testimonials={testimonials} />;
+}
+
+function Component({ testimonials }: { testimonials: Testimonial[] }) {
+  return (
+    <div className="founding-members-experience relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-slate-50 dark:bg-slate-950">
+      <style>
+        {`
+          @keyframes animate-grid {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
+          }
+          .animated-grid {
+            width: 200%;
+            height: 200%;
+            background-image:
+              linear-gradient(to right, #e2e8f0 1px, transparent 1px),
+              linear-gradient(to bottom, #e2e8f0 1px, transparent 1px);
+            background-size: 3rem 3rem;
+            animation: animate-grid 40s linear infinite alternate;
+          }
+          .dark .animated-grid {
+            background-image:
+              linear-gradient(to right, #1e293b 1px, transparent 1px),
+              linear-gradient(to bottom, #1e293b 1px, transparent 1px);
+          }
+        `}
+      </style>
+      <div className="animated-grid absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-10" />
+      <div className="z-10">
+        <AnimatedTestimonialsDemo testimonials={testimonials} />
+      </div>
+    </div>
+  );
 }
 
 export function MemberGridSection({ section, members }: { section: CmsSection; members: MemberDto[] }) {
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const teamMembers = getTeamMembers(members);
-  const title = typeof section.content.title === "string" ? section.content.title : "Founding members";
-  const subtitle =
-    typeof section.content.subtitle === "string"
-      ? section.content.subtitle
-      : "Dedication. Expertise. Passion.";
-
-  const col1 = teamMembers.filter((_, index) => index % 3 === 0);
-  const col2 = teamMembers.filter((_, index) => index % 3 === 1);
-  const col3 = teamMembers.filter((_, index) => index % 3 === 2);
-
-  return (
-    <SectionFrame section={section}>
-      <div className="mx-auto flex w-full max-w-6xl select-none flex-col gap-10 px-4 py-10 font-sans md:flex-row md:items-start md:gap-12 md:px-6 lg:gap-16">
-        <div className="min-w-0 flex-1 md:hidden">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-heritage-green)]">LORA</p>
-          <h1 className="text-[clamp(2.6rem,12vw,5rem)] font-[var(--font-heading-weight)] uppercase leading-[0.9] text-black">
-            {title}
-          </h1>
-          <p className="mt-4 text-sm uppercase tracking-[0.18em] text-black/45">{subtitle}</p>
-        </div>
-
-        <div className="flex flex-shrink-0 gap-2 overflow-x-auto pb-1 md:gap-3 md:overflow-visible md:pb-0">
-          <div className="flex flex-col gap-2 md:gap-3">
-            {col1.map((member) => (
-              <PhotoCard
-                key={member.id}
-                member={member}
-                className="h-[120px] w-[110px] sm:h-[140px] sm:w-[130px] md:h-[165px] md:w-[155px]"
-                hoveredId={hoveredId}
-                onHover={setHoveredId}
-              />
-            ))}
-          </div>
-
-          <div className="mt-[48px] flex flex-col gap-2 sm:mt-[56px] md:mt-[68px] md:gap-3">
-            {col2.map((member) => (
-              <PhotoCard
-                key={member.id}
-                member={member}
-                className="h-[132px] w-[122px] sm:h-[155px] sm:w-[145px] md:h-[182px] md:w-[172px]"
-                hoveredId={hoveredId}
-                onHover={setHoveredId}
-              />
-            ))}
-          </div>
-
-          <div className="mt-[22px] flex flex-col gap-2 sm:mt-[26px] md:mt-[32px] md:gap-3">
-            {col3.map((member) => (
-              <PhotoCard
-                key={member.id}
-                member={member}
-                className="h-[125px] w-[115px] sm:h-[146px] sm:w-[136px] md:h-[172px] md:w-[162px]"
-                hoveredId={hoveredId}
-                onHover={setHoveredId}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className="flex w-full flex-1 flex-col gap-4 pt-0 sm:grid sm:grid-cols-2 md:flex md:flex-col md:gap-5 md:pt-2">
-          <div className="mb-4 hidden md:block">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-heritage-green)]">LORA</p>
-            <h1 className="text-[clamp(3rem,7vw,5.7rem)] font-[var(--font-heading-weight)] uppercase leading-[0.9] text-black">
-              {title}
-            </h1>
-            <p className="mt-4 text-xs uppercase tracking-[0.2em] text-black/45">{subtitle}</p>
-          </div>
-
-          {teamMembers.map((member) => (
-            <MemberRow key={member.id} member={member} hoveredId={hoveredId} onHover={setHoveredId} />
-          ))}
-        </div>
-      </div>
-    </SectionFrame>
+  const quote = getText(
+    section.content,
+    "quote",
+    "LORA's founding members bring together residents committed to preserving Luweibdeh's architecture, streets, greenery, and community life.",
   );
-}
+  const testimonials = useMemo(() => getTestimonials(members, quote), [members, quote]);
 
-function PhotoCard({
-  member,
-  className,
-  hoveredId,
-  onHover,
-}: {
-  member: TeamMember;
-  className: string;
-  hoveredId: string | null;
-  onHover: (id: string | null) => void;
-}) {
-  const isActive = hoveredId === member.id;
-  const isDimmed = hoveredId !== null && !isActive;
-
-  return (
-    <div
-      className={cn(
-        "relative flex-shrink-0 cursor-pointer overflow-hidden rounded-xl bg-[var(--color-stone-light)] transition-opacity duration-300",
-        className,
-        isDimmed ? "opacity-60" : "opacity-100",
-      )}
-      onMouseEnter={() => onHover(member.id)}
-      onMouseLeave={() => onHover(null)}
-    >
-      {member.image ? (
-        <div
-          className="absolute inset-0"
-          style={{
-            filter: isActive ? "grayscale(0) brightness(1)" : "grayscale(1) brightness(0.77)",
-            transform: isActive ? "scale(1.04)" : "scale(1)",
-          }}
-        >
-          <MemberImage src={member.image} alt={member.name} />
-        </div>
-      ) : (
-        <div
-          className="flex h-full w-full items-center justify-center bg-[var(--color-stone)] text-3xl font-semibold text-black/38 transition-[filter] duration-500"
-          style={{ filter: isActive ? "grayscale(0) brightness(1)" : "grayscale(1) brightness(0.82)" }}
-        >
-          {member.initials}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function MemberRow({
-  member,
-  hoveredId,
-  onHover,
-}: {
-  member: TeamMember;
-  hoveredId: string | null;
-  onHover: (id: string | null) => void;
-}) {
-  const isActive = hoveredId === member.id;
-  const isDimmed = hoveredId !== null && !isActive;
-  const hasSocial = member.social?.twitter ?? member.social?.linkedin ?? member.social?.instagram ?? member.social?.behance;
-
-  return (
-    <div
-      className={cn("cursor-pointer transition-opacity duration-300", isDimmed ? "opacity-50" : "opacity-100")}
-      onMouseEnter={() => onHover(member.id)}
-      onMouseLeave={() => onHover(null)}
-    >
-      <div className="flex items-center gap-2.5">
-        <span
-          className={cn(
-            "h-3 w-4 flex-shrink-0 rounded-[5px] transition-all duration-300",
-            isActive ? "w-5 bg-black" : "bg-black/25",
-          )}
-        />
-        <span
-          className={cn(
-            "text-base font-semibold leading-none tracking-normal transition-colors duration-300 md:text-[18px]",
-            isActive ? "text-black" : "text-black/80",
-          )}
-        >
-          {member.name}
-        </span>
-
-        {hasSocial ? (
-          <div
-            className={cn(
-              "ml-0.5 flex items-center gap-1.5 transition-all duration-200",
-              isActive ? "translate-x-0 opacity-100" : "pointer-events-none -translate-x-2 opacity-0",
-            )}
-          >
-            {member.social?.twitter ? <SocialLink href={member.social.twitter} label="X / Twitter" icon="twitter" /> : null}
-            {member.social?.linkedin ? <SocialLink href={member.social.linkedin} label="LinkedIn" icon="linkedin" /> : null}
-            {member.social?.instagram ? <SocialLink href={member.social.instagram} label="Instagram" icon="instagram" /> : null}
-            {member.social?.behance ? <SocialLink href={member.social.behance} label="Behance" icon="behance" /> : null}
-          </div>
-        ) : null}
-      </div>
-
-      <p className="mt-1.5 pl-[27px] text-[8px] font-medium uppercase tracking-[0.2em] text-black/45 md:text-[10px]">
-        {member.role}
-      </p>
-    </div>
-  );
-}
-
-function SocialLink({ href, label, icon }: { href: string; label: string; icon: "twitter" | "linkedin" | "instagram" | "behance" }) {
-  const Icon = icon === "twitter" ? Twitter : icon === "linkedin" ? Linkedin : icon === "instagram" ? Instagram : BadgeCheck;
-
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={(event) => event.stopPropagation()}
-      className="rounded p-1 text-black/45 transition-all duration-150 hover:scale-110 hover:bg-black/10 hover:text-black"
-      title={label}
-    >
-      <Icon size={11} />
-      <span className="sr-only">{label}</span>
-    </a>
-  );
+  return <Component testimonials={testimonials} />;
 }

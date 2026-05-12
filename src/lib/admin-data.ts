@@ -100,3 +100,24 @@ export async function listAdminMedia() {
   if (!prisma) return fallbackGallery.flatMap((collection) => collection.images).map((image, index) => ({ id: image.src + index, ...image }));
   return prisma.mediaAsset.findMany({ orderBy: { createdAt: "desc" } });
 }
+
+export async function listAdminUsers() {
+  const prisma = getPrisma();
+  if (!prisma) return [];
+  return prisma.user.findMany({
+    include: { role: true },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function listAdminRoles() {
+  const prisma = getPrisma();
+  if (!prisma) return [];
+  return prisma.role.findMany({ orderBy: { name: "asc" } });
+}
+
+export async function listAdminFooterColumns() {
+  const prisma = getPrisma();
+  if (!prisma) return [];
+  return prisma.footerColumn.findMany({ orderBy: [{ locale: "asc" }, { sortOrder: "asc" }] });
+}

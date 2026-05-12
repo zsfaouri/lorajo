@@ -25,6 +25,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const url = typeof body.url === "string" ? body.url : "";
     if (!url || !url.startsWith("https://")) return error("Invalid media URL", 422);
+    const category = typeof body.category === "string" ? body.category.trim() : "";
 
     const asset = await prisma.mediaAsset.create({
       data: {
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
         bytes: typeof body.bytes === "number" ? body.bytes : null,
         format: typeof body.format === "string" ? body.format : null,
         source: typeof body.source === "string" ? body.source : "supabase storage",
-        metadata: { uploadedBy: session.user?.id ?? null },
+        metadata: { uploadedBy: session.user?.id ?? null, category: category || null },
       },
     });
 
@@ -46,6 +47,7 @@ export async function POST(request: Request) {
 
   const form = await request.formData();
   const file = form.get("file");
+  const category = String(form.get("category") ?? "").trim();
   if (!(file instanceof File)) return error("Missing file", 422);
   if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) return error("Unsupported file type", 415);
 
@@ -77,6 +79,7 @@ export async function POST(request: Request) {
         bytes: upload.bytes,
         format: upload.format,
         source: "cloudinary",
+        metadata: { originalName: file.name, mimeType: file.type, category: category || null },
       },
     });
 
@@ -112,7 +115,7 @@ export async function POST(request: Request) {
       bytes: bytes.length,
       format: extension.replace(".", ""),
       source: "supabase storage",
-      metadata: { originalName: file.name, mimeType: file.type },
+      metadata: { originalName: file.name, mimeType: file.type, category: category || null },
     },
   });
 
