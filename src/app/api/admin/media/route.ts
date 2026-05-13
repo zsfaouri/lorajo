@@ -8,7 +8,7 @@ export async function GET() {
   if (!session) return error("Unauthorized", 401);
   const prisma = requirePrisma();
   if (!prisma) return error("Database is not configured", 503);
-  return ok(await prisma.mediaAsset.findMany({ orderBy: { createdAt: "desc" } }));
+  return ok(await prisma.mediaAsset.findMany({ where: { type: "IMAGE", source: "google drive" }, orderBy: { createdAt: "desc" } }));
 }
 
 export async function POST(request: Request) {

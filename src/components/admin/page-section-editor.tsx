@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState, type DragEvent, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
+import { DriveImagePicker, type DriveMediaAsset } from "@/components/admin/drive-image-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,12 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn, isRecord } from "@/lib/utils";
 
-type MediaAsset = {
-  id: string;
-  url: string;
-  alt?: string | null;
-  caption?: string | null;
-};
+type MediaAsset = DriveMediaAsset;
 
 type Section = {
   id: string;
@@ -151,30 +147,12 @@ export function PageSectionEditor({
 }) {
   const initialSections = useMemo(() => sections.map(asEditableSection), [sections]);
   const [sectionList, setSectionList] = useState(initialSections);
-  const [assets, setAssets] = useState(mediaAssets);
   const [activeId, setActiveId] = useState(initialSections[0]?.id ?? "");
   const [status, setStatus] = useState<Record<string, string>>({});
   const activeSection = sectionList.find((section) => section.id === activeId) ?? sectionList[0];
 
   function updateSection(sectionId: string, updater: (section: EditableSection) => EditableSection) {
     setSectionList((current) => current.map((section) => (section.id === sectionId ? updater(section) : section)));
-  }
-
-  async function uploadFile(file: File) {
-    const form = new FormData();
-    form.set("file", file);
-    form.set("alt", file.name);
-    const response = await fetch("/api/admin/media", { method: "POST", body: form });
-    const json = await response.json();
-    if (!response.ok) throw new Error(json.error ?? "Upload failed");
-    const asset = {
-      id: json.id ?? json.url,
-      url: json.url ?? json.secureUrl,
-      alt: json.alt ?? file.name,
-      caption: json.caption ?? file.name,
-    };
-    setAssets((current) => [asset, ...current]);
-    return asset;
   }
 
   async function save(section: EditableSection) {
@@ -297,9 +275,8 @@ export function PageSectionEditor({
 
       <SectionForm
         section={activeSection}
-        assets={assets}
+        assets={mediaAssets}
         status={status[activeSection.id]}
-        onUpload={uploadFile}
         onChange={(updater) => updateSection(activeSection.id, updater)}
         onSave={() => save(activeSection)}
       />
@@ -311,14 +288,12 @@ function SectionForm({
   section,
   assets,
   status,
-  onUpload,
   onChange,
   onSave,
 }: {
   section: EditableSection;
   assets: MediaAsset[];
   status?: string;
-  onUpload: (file: File) => Promise<MediaAsset>;
   onChange: (updater: (section: EditableSection) => EditableSection) => void;
   onSave: () => void;
 }) {
@@ -426,10 +401,9 @@ function SectionForm({
             </Field>
             <ImageListEditor
               title="Hero images"
-              description="Drag images here, upload new files, or click media below. The first image is also used as the fallback image."
+              description="Choose images from Google Drive. The first image is also used as the fallback image."
               images={heroFrames}
               assets={assets}
-              onUpload={onUpload}
               onChange={(paths) => {
                 setSettings("heroScrubFrames", paths);
                 setContent("image", paths[0] ?? "");
@@ -449,7 +423,6 @@ function SectionForm({
               images={stringValue(section.content, "image") ? [stringValue(section.content, "image")] : []}
               assets={assets}
               maxImages={1}
-              onUpload={onUpload}
               onChange={(paths) => setContent("image", paths[0] ?? "")}
             />
           </>
@@ -476,7 +449,6 @@ function SectionForm({
                 title="Grid images"
                 images={whatWeDoImages}
                 assets={assets}
-                onUpload={onUpload}
                 onChange={(images) => setContent("images", images)}
               />
             ) : null}
@@ -488,7 +460,6 @@ function SectionForm({
             title="Gallery images"
             images={contentItems}
             assets={assets}
-            onUpload={onUpload}
             onChange={(images) => setContent("items", images)}
           />
         ) : null}
@@ -563,7 +534,6 @@ function ImageListEditor({
   images,
   assets,
   maxImages,
-  onUpload,
   onChange,
 }: {
   title: string;
@@ -571,47 +541,13 @@ function ImageListEditor({
   images: string[];
   assets: MediaAsset[];
   maxImages?: number;
-  onUpload: (file: File) => Promise<MediaAsset>;
   onChange: (paths: string[]) => void;
 }) {
-  const [status, setStatus] = useState("");
-
-  async function handleFiles(files: FileList | File[]) {
-    setStatus("Uploading...");
-    try {
-      const uploaded = [];
-      for (const file of Array.from(files)) {
-        uploaded.push(await onUpload(file));
-      }
-      const next = [...images, ...uploaded.map((asset) => asset.url)];
-      onChange(typeof maxImages === "number" ? next.slice(0, maxImages) : next);
-      setStatus("Uploaded");
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Upload failed");
-    }
-  }
-
-  function drop(event: DragEvent<HTMLDivElement>) {
-    event.preventDefault();
-    void handleFiles(event.dataTransfer.files);
-  }
-
   return (
     <div className="grid gap-4">
       <div>
         <p className="text-sm font-medium">{title}</p>
         <p className="mt-1 text-sm text-white/45">{description}</p>
-      </div>
-      <div
-        onDragOver={(event) => event.preventDefault()}
-        onDrop={drop}
-        className="grid min-h-32 place-items-center rounded-md border border-dashed border-white/18 bg-black/24 p-4 text-center"
-      >
-        <div className="grid gap-3">
-          <p className="text-sm text-white/55">Drop images here</p>
-          <Input type="file" multiple={!maxImages || maxImages > 1} accept="image/*" onChange={(event) => event.target.files && void handleFiles(event.target.files)} className="border-white/15 bg-white/8 text-white" />
-          <span className="text-sm text-white/40">{status}</span>
-        </div>
       </div>
       <SelectedImages images={images} onChange={onChange} />
       <MediaPicker assets={assets} selected={images} maxImages={maxImages} onChange={onChange} />
@@ -623,13 +559,11 @@ function ImageObjectListEditor({
   title,
   images,
   assets,
-  onUpload,
   onChange,
 }: {
   title: string;
   images: Array<{ src: string; alt: string; caption: string }>;
   assets: MediaAsset[];
-  onUpload: (file: File) => Promise<MediaAsset>;
   onChange: (images: Array<{ src: string; alt: string; caption: string }>) => void;
 }) {
   const paths = images.map((image) => image.src);
@@ -639,7 +573,6 @@ function ImageObjectListEditor({
       description="Pick images visually. Captions can be edited after selecting."
       images={paths}
       assets={assets}
-      onUpload={onUpload}
       onChange={(nextPaths) => {
         const nextImages = nextPaths.map((src) => {
           const existing = images.find((image) => image.src === src);
@@ -659,7 +592,7 @@ function SelectedImages({ images, onChange }: { images: string[]; onChange: (pat
       {images.map((src, index) => (
         <figure key={`${src}-${index}`} className="overflow-hidden rounded-md border border-white/10 bg-black/30">
           <div className="relative aspect-[4/3]">
-            <Image src={src} alt="" fill className="object-cover" sizes="220px" />
+            <Image src={src} alt="" fill className="object-cover" sizes="220px" unoptimized={src.startsWith("http")} />
           </div>
           <figcaption className="grid gap-2 p-3">
             <span className="truncate text-xs text-white/40">Selected image {index + 1}</span>
@@ -690,34 +623,20 @@ function MediaPicker({
   onChange: (paths: string[]) => void;
 }) {
   return (
-    <div className="grid gap-3">
-      <p className="text-xs uppercase tracking-[0.16em] text-white/38">Media library</p>
-      <div className="grid max-h-[420px] gap-3 overflow-auto rounded-md border border-white/10 bg-black/18 p-3 sm:grid-cols-3 lg:grid-cols-5">
-        {assets.map((asset) => {
-          const isSelected = selected.includes(asset.url);
-          return (
-            <button
-              key={asset.id}
-              type="button"
-              onClick={() => {
-                if (isSelected) {
-                  onChange(selected.filter((item) => item !== asset.url));
-                  return;
-                }
-                const next = [...selected, asset.url];
-                onChange(typeof maxImages === "number" ? next.slice(-maxImages) : next);
-              }}
-              className={cn("overflow-hidden rounded-md border bg-black/30 text-left", isSelected ? "border-white" : "border-white/10")}
-            >
-              <div className="relative aspect-square">
-                <Image src={asset.url} alt={asset.alt ?? "Media asset"} fill className="object-cover" sizes="160px" />
-              </div>
-              <span className="block truncate px-2 py-2 text-xs text-white/55">{asset.caption ?? asset.alt ?? "Image"}</span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
+    <DriveImagePicker
+      assets={assets}
+      selectedUrls={selected}
+      title="Choose from Google Drive"
+      description="All images come from the Drive folders synced in Image Cloud."
+      onPick={(asset) => {
+        if (selected.includes(asset.url)) {
+          onChange(selected.filter((item) => item !== asset.url));
+          return;
+        }
+        const next = [...selected, asset.url];
+        onChange(typeof maxImages === "number" ? next.slice(-maxImages) : next);
+      }}
+    />
   );
 }
 

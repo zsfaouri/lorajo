@@ -3,12 +3,13 @@
 import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
 
+import { DriveImagePicker, type DriveMediaAsset } from "@/components/admin/drive-image-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-type FieldType = "text" | "textarea" | "select" | "datetime";
+type FieldType = "text" | "textarea" | "select" | "datetime" | "image";
 
 type FieldConfig = {
   name: string;
@@ -45,6 +46,7 @@ function entryBody(value: unknown) {
 
 function normalizePayload(fields: FieldConfig[], values: Record<string, string>) {
   const payload: Record<string, unknown> = {};
+  const contentExtras: Record<string, string> = {};
 
   for (const field of fields) {
     const value = values[field.name]?.trim();
@@ -52,6 +54,12 @@ function normalizePayload(fields: FieldConfig[], values: Record<string, string>)
 
     if (field.name === "content" || field.name === "settings" || field.name === "metadata") {
       payload[field.name] = { body: value };
+      continue;
+    }
+
+    if (field.name === "imageUrl" || field.name === "imageAlt" || field.name === "actionLabel") {
+      payload[field.name] = value;
+      contentExtras[field.name] = value;
       continue;
     }
 
@@ -73,6 +81,11 @@ function normalizePayload(fields: FieldConfig[], values: Record<string, string>)
     payload[field.name] = value;
   }
 
+  if (Object.keys(contentExtras).length > 0) {
+    const existingContent = payload.content && typeof payload.content === "object" && !Array.isArray(payload.content) ? payload.content : {};
+    payload.content = { ...existingContent, ...contentExtras };
+  }
+
   return payload;
 }
 
@@ -82,6 +95,7 @@ export function AdminResourceManager({
   endpoint,
   fields,
   initialItems,
+  mediaAssets = [],
   previewBasePath,
   editBasePath,
 }: {
@@ -90,6 +104,7 @@ export function AdminResourceManager({
   endpoint: string;
   fields: FieldConfig[];
   initialItems: ResourceItem[];
+  mediaAssets?: DriveMediaAsset[];
   previewBasePath?: string;
   editBasePath?: string;
 }) {
@@ -183,6 +198,18 @@ export function AdminResourceManager({
                         </option>
                       ))}
                     </select>
+                  ) : field.type === "image" ? (
+                    <DriveImagePicker
+                      assets={mediaAssets}
+                      selectedUrls={values[field.name] ? [values[field.name]] : []}
+                      compact
+                      title="Choose image from Google Drive"
+                      description="This field only uses images from synced Drive folders."
+                      onPick={(asset) => {
+                        setTitleAndMaybeSlug(field.name, asset.url);
+                        if (!values.imageAlt) setTitleAndMaybeSlug("imageAlt", asset.alt ?? asset.caption ?? "");
+                      }}
+                    />
                   ) : (
                     <Input
                       type={field.type === "datetime" ? "datetime-local" : "text"}

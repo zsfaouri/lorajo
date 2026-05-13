@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { PageSectionEditor } from "@/components/admin/page-section-editor";
 import { requireAdmin } from "@/lib/admin-auth";
+import { listAdminMedia } from "@/lib/admin-data";
 import { fallbackPages } from "@/lib/fallback-data";
 import { getPrisma } from "@/lib/prisma";
 
@@ -13,11 +14,7 @@ export default async function AdminPageEditor({ params }: { params: Promise<{ id
   if (prisma) {
     const [page, mediaAssets] = await Promise.all([
       prisma.page.findUnique({ where: { id }, include: { sections: { orderBy: { sortOrder: "asc" } } } }),
-      prisma.mediaAsset.findMany({
-        where: { type: "IMAGE" },
-        orderBy: { createdAt: "desc" },
-        select: { id: true, url: true, alt: true, caption: true },
-      }),
+      listAdminMedia(),
     ]);
     if (!page) notFound();
     return <PageSectionEditor pageId={page.id} pageTitle={page.title} sections={page.sections} mediaAssets={mediaAssets} />;

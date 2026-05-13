@@ -2,6 +2,7 @@ import { error, ok, requireAdminApi, requirePrisma } from "@/lib/api-utils";
 import { syncDriveGalleryToDatabase } from "@/lib/drive-gallery";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export async function POST() {
   const session = await requireAdminApi();

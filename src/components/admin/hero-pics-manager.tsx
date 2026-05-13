@@ -3,17 +3,9 @@
 import Image from "next/image";
 import { useState } from "react";
 
+import { DriveImagePicker, type DriveMediaAsset } from "@/components/admin/drive-image-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { uploadAdminImage, type UploadedAsset } from "@/lib/admin-upload";
-
-type MediaAsset = {
-  id: string;
-  url: string;
-  alt?: string | null;
-  caption?: string | null;
-};
 
 type HeroSection = {
   id: string;
@@ -58,10 +50,9 @@ export function HeroPicsManager({
   mediaAssets,
 }: {
   initialSections: HeroSection[];
-  mediaAssets: MediaAsset[];
+  mediaAssets: DriveMediaAsset[];
 }) {
   const [sections, setSections] = useState(initialSections);
-  const [assets, setAssets] = useState(mediaAssets);
   const [status, setStatus] = useState<Record<string, string>>({});
 
   function updateImages(sectionId: string, images: string[]) {
@@ -76,27 +67,6 @@ export function HeroPicsManager({
           : section,
       ),
     );
-  }
-
-  async function upload(sectionId: string, files: FileList | null) {
-    if (!files?.length) return;
-    setStatus((current) => ({ ...current, [sectionId]: "Uploading..." }));
-    try {
-      const uploaded: UploadedAsset[] = [];
-      for (const file of Array.from(files)) {
-        uploaded.push(await uploadAdminImage(file, file.name, "Hero Pics"));
-      }
-      const nextAssets: MediaAsset[] = uploaded.flatMap((asset) => {
-        const url = asset.url ?? asset.src ?? "";
-        return url ? [{ id: asset.id, url, alt: asset.alt, caption: asset.caption }] : [];
-      });
-      setAssets((current) => [...nextAssets, ...current]);
-      const section = sections.find((item) => item.id === sectionId);
-      updateImages(sectionId, [...(section ? sectionImages(section) : []), ...nextAssets.map((asset) => asset.url)]);
-      setStatus((current) => ({ ...current, [sectionId]: "Uploaded. Click save." }));
-    } catch (caught) {
-      setStatus((current) => ({ ...current, [sectionId]: caught instanceof Error ? caught.message : "Upload failed." }));
-    }
   }
 
   async function save(section: HeroSection) {
@@ -123,7 +93,7 @@ export function HeroPicsManager({
         <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-heritage-green)]">Hero Pics</p>
         <h1 className="mt-3 text-4xl font-medium">Hero pictures</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-black/55">
-          Change homepage and page hero images from one place. Upload new pictures or pick from Media Cloud.
+          Hero pictures come from the Google Drive hero folder. Add files to Drive, sync, choose images, then save.
         </p>
       </div>
 
@@ -161,20 +131,6 @@ export function HeroPicsManager({
                 </div>
               </CardHeader>
               <CardContent className="grid gap-5">
-                <label className="grid min-h-28 cursor-pointer place-items-center rounded-md border border-dashed border-white/20 bg-black/20 p-4 text-center">
-                  <span className="text-sm text-white/60">Click to upload hero pictures</span>
-                  <Input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    className="mt-3 max-w-md border-white/15 bg-white/8 text-white"
-                    onChange={(event) => {
-                      void upload(section.id, event.target.files);
-                      event.target.value = "";
-                    }}
-                  />
-                </label>
-
                 {images.length > 0 ? (
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     {images.map((src, index) => (
@@ -197,24 +153,16 @@ export function HeroPicsManager({
                   <p className="rounded-md border border-white/10 bg-black/20 p-4 text-sm text-white/50">No hero pictures selected.</p>
                 )}
 
-                <div className="grid gap-3">
-                  <p className="text-sm font-medium">Pick from Media Cloud</p>
-                  <div className="grid max-h-[460px] gap-3 overflow-auto sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7">
-                    {assets.map((asset) => (
-                      <button
-                        key={asset.id}
-                        type="button"
-                        onClick={() => updateImages(section.id, [...images, asset.url])}
-                        className="overflow-hidden rounded-md border border-white/10 bg-black/20 text-left transition hover:border-[var(--color-heritage-green)]"
-                      >
-                        <div className="relative aspect-square">
-                          <SmartImage src={asset.url} alt={asset.alt ?? "Media image"} />
-                        </div>
-                        <span className="block truncate px-2 py-2 text-xs text-white/55">{asset.alt ?? "Image"}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <DriveImagePicker
+                  assets={mediaAssets}
+                  selectedUrls={images}
+                  category="hero-pics"
+                  lockCategory
+                  title="Choose from Drive hero folder"
+                  description="Only pictures inside the Google Drive hero folder appear here."
+                  emptyMessage="The Drive hero folder has no synced pictures. Add pictures to Google Drive, then click Sync Drive."
+                  onPick={(asset) => updateImages(section.id, [...images, asset.url])}
+                />
               </CardContent>
             </Card>
           );

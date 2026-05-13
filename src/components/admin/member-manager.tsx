@@ -1,23 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useRef, useState } from "react";
-import { ImagePlus, Plus, Save, Trash2, UploadCloud } from "lucide-react";
+import { useState } from "react";
+import { ImagePlus, Plus, Save, Trash2 } from "lucide-react";
 
+import { DriveImagePicker, type DriveMediaAsset } from "@/components/admin/drive-image-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { uploadAdminImage } from "@/lib/admin-upload";
 import { cn } from "@/lib/utils";
 
-type MediaAsset = {
-  id: string;
-  url?: string;
-  src?: string;
-  alt?: string | null;
-  caption?: string | null;
-};
+type MediaAsset = DriveMediaAsset & { src?: string };
 
 type Member = {
   id: string;
@@ -123,24 +117,16 @@ export function MemberManager({
   mediaAssets: MediaAsset[];
 }) {
   const [members, setMembers] = useState(initialMembers);
-  const [assets, setAssets] = useState(mediaAssets);
   const [selectedId, setSelectedId] = useState(initialMembers[0]?.id ?? "new");
   const [drafts, setDrafts] = useState<Record<string, DraftMember>>(() =>
     Object.fromEntries(initialMembers.map((member) => [member.id, memberToDraft(member)])),
   );
   const [newDraft, setNewDraft] = useState<DraftMember>(() => emptyDraft(initialMembers.length + 1));
   const [status, setStatus] = useState("");
-  const [mediaFilter, setMediaFilter] = useState("");
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const selected = members.find((member) => member.id === selectedId) ?? null;
   const activeDraft = selected ? drafts[selected.id] ?? memberToDraft(selected) : newDraft;
-  const selectedAsset = assets.find((asset) => asset.id === activeDraft.mediaAssetId) ?? selected?.mediaAsset ?? null;
-  const filteredAssets = useMemo(() => {
-    const query = mediaFilter.trim().toLowerCase();
-    if (!query) return assets;
-    return assets.filter((asset) => `${asset.alt ?? ""} ${asset.caption ?? ""} ${assetUrl(asset)}`.toLowerCase().includes(query));
-  }, [assets, mediaFilter]);
+  const selectedAsset = mediaAssets.find((asset) => asset.id === activeDraft.mediaAssetId) ?? selected?.mediaAsset ?? null;
 
   function setActiveDraft(next: Partial<DraftMember>) {
     if (selected) {
@@ -215,25 +201,13 @@ export function MemberManager({
     setStatus("Deleted.");
   }
 
-  async function uploadFile(file: File) {
-    try {
-      setStatus("Uploading image...");
-      const asset = await uploadAdminImage(file, activeDraft.name || file.name);
-      setAssets((current) => [asset, ...current]);
-      setActiveDraft({ mediaAssetId: asset.id });
-      setStatus("Image uploaded. Press Save to publish it on the member.");
-    } catch (caught) {
-      setStatus(caught instanceof Error ? caught.message : "Upload failed.");
-    }
-  }
-
   return (
     <div className="grid gap-6 xl:grid-cols-[340px_1fr]">
       <aside className="grid content-start gap-4">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-white/40">People</p>
           <h1 className="mt-3 text-3xl font-medium">Founding Members</h1>
-          <p className="mt-3 text-sm leading-6 text-white/48">Click a member, change the text, drop a photo, press Save.</p>
+          <p className="mt-3 text-sm leading-6 text-white/48">Click a member, change the text, choose a Drive photo, press Save.</p>
         </div>
 
         <button
@@ -298,67 +272,28 @@ export function MemberManager({
           </CardHeader>
           <CardContent className="grid gap-6 lg:grid-cols-[320px_1fr]">
             <section className="grid content-start gap-4">
-              <div
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  const file = event.dataTransfer.files?.[0];
-                  if (file) void uploadFile(file);
-                }}
-                className="group relative flex aspect-[4/5] items-center justify-center overflow-hidden rounded-xl border border-dashed border-white/20 bg-black/35"
-              >
+              <div className="group relative flex aspect-[4/5] items-center justify-center overflow-hidden rounded-xl border border-dashed border-white/20 bg-black/35">
                 {assetUrl(selectedAsset) ? (
                   <SmartImage src={assetUrl(selectedAsset)} alt={selectedAsset?.alt ?? activeDraft.name} fill className="object-cover" sizes="320px" />
                 ) : (
                   <div className="grid justify-items-center gap-3 text-center text-white/45">
                     <ImagePlus size={34} />
-                    <p className="max-w-48 text-sm leading-5">Drop a portrait here or upload below.</p>
+                    <p className="max-w-48 text-sm leading-5">Choose a portrait from the Drive founders folder.</p>
                   </div>
                 )}
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-100">
-                  <Button type="button" variant="admin" size="sm" onClick={() => fileInputRef.current?.click()} className="w-full">
-                    <UploadCloud size={15} />
-                    Upload photo
-                  </Button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      event.target.value = "";
-                      if (file) void uploadFile(file);
-                    }}
-                  />
-                </div>
               </div>
 
-              <div className="rounded-md border border-white/10 bg-black/20 p-3">
-                <Label className="text-white/55">Pick existing photo</Label>
-                <Input
-                  value={mediaFilter}
-                  onChange={(event) => setMediaFilter(event.target.value)}
-                  placeholder="Search media"
-                  className="mt-2 border-white/15 bg-white/8 text-white"
-                />
-                <div className="mt-3 grid max-h-72 grid-cols-3 gap-2 overflow-auto">
-                  {filteredAssets.map((asset) => (
-                    <button
-                      key={asset.id}
-                      type="button"
-                      onClick={() => setActiveDraft({ mediaAssetId: asset.id })}
-                      className={cn(
-                        "relative aspect-square overflow-hidden rounded-md border bg-black/30",
-                        activeDraft.mediaAssetId === asset.id ? "border-white" : "border-white/10 hover:border-white/35",
-                      )}
-                      title={asset.alt ?? asset.caption ?? "Media"}
-                    >
-                      <SmartImage src={assetUrl(asset)} alt={asset.alt ?? "Media"} fill className="object-cover" sizes="96px" />
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <DriveImagePicker
+                assets={mediaAssets}
+                selectedIds={activeDraft.mediaAssetId ? [activeDraft.mediaAssetId] : []}
+                category="founding-members"
+                lockCategory
+                compact
+                title="Choose from Drive founders folder"
+                description="Only pictures inside the Google Drive founders folder appear here."
+                emptyMessage="The Drive founders folder has no synced pictures. Add portraits to Google Drive, then click Sync Drive."
+                onPick={(asset) => setActiveDraft({ mediaAssetId: asset.id })}
+              />
             </section>
 
             <section className="grid content-start gap-4">

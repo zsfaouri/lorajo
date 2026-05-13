@@ -97,8 +97,12 @@ export async function listAdminVolunteers() {
 
 export async function listAdminMedia() {
   const prisma = getPrisma();
-  if (!prisma) return fallbackGallery.flatMap((collection) => collection.images).map((image, index) => ({ id: image.src + index, ...image }));
-  return prisma.mediaAsset.findMany({ orderBy: { createdAt: "desc" } });
+  if (!prisma) return [];
+  return prisma.mediaAsset.findMany({
+    where: { type: "IMAGE", source: "google drive" },
+    select: { id: true, url: true, alt: true, caption: true, source: true, metadata: true },
+    orderBy: { createdAt: "desc" },
+  });
 }
 
 export async function listAdminUsers() {

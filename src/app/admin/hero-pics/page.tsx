@@ -1,6 +1,7 @@
 import { HeroPicsManager } from "@/components/admin/hero-pics-manager";
 import { requireAdmin } from "@/lib/admin-auth";
-import { fallbackGallery, fallbackPages } from "@/lib/fallback-data";
+import { listAdminMedia } from "@/lib/admin-data";
+import { fallbackPages } from "@/lib/fallback-data";
 import { getPrisma } from "@/lib/prisma";
 import type { LocaleCode } from "@/types/cms";
 
@@ -31,22 +32,10 @@ function fallbackHeroSections() {
   );
 }
 
-function fallbackMediaAssets() {
-  const seen = new Set<string>();
-  return fallbackGallery
-    .flatMap((collection) => collection.images)
-    .filter((image) => {
-      if (seen.has(image.src)) return false;
-      seen.add(image.src);
-      return true;
-    })
-    .map((image, index) => ({ id: `fallback-media-${index}`, url: image.src, alt: image.alt, caption: image.caption }));
-}
-
 export default async function AdminHeroPicsPage() {
   await requireAdmin();
   const prisma = getPrisma();
-  if (!prisma) return <HeroPicsManager initialSections={fallbackHeroSections()} mediaAssets={fallbackMediaAssets()} />;
+  if (!prisma) return <HeroPicsManager initialSections={fallbackHeroSections()} mediaAssets={[]} />;
 
   const [sections, mediaAssets] = await Promise.all([
     prisma.pageSection.findMany({
@@ -54,11 +43,7 @@ export default async function AdminHeroPicsPage() {
       include: { page: { select: { title: true, slug: true, locale: true } } },
       orderBy: [{ page: { locale: "asc" } }, { page: { slug: "asc" } }, { sortOrder: "asc" }],
     }),
-    prisma.mediaAsset.findMany({
-      where: { type: "IMAGE" },
-      select: { id: true, url: true, alt: true, caption: true },
-      orderBy: { createdAt: "desc" },
-    }),
+    listAdminMedia(),
   ]);
 
   const mappedSections = sections.map((section) => ({
@@ -78,7 +63,7 @@ export default async function AdminHeroPicsPage() {
   return (
     <HeroPicsManager
       initialSections={mappedSections.length > 0 ? mappedSections : fallbackHeroSections()}
-      mediaAssets={mediaAssets.length > 0 ? mediaAssets : fallbackMediaAssets()}
+      mediaAssets={mediaAssets}
     />
   );
 }

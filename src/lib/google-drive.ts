@@ -1,7 +1,5 @@
 import { Readable } from "node:stream";
 
-import { google } from "googleapis";
-
 export const DEFAULT_GOOGLE_DRIVE_FOLDER_ID = "1JPsc0Lp5TbxU6AoO093NVgyJYaYVmK6v";
 
 const KNOWN_ROOT_FOLDERS: DriveBrowserItem[] = [
@@ -85,11 +83,12 @@ function getRootFolderId() {
   return process.env.GOOGLE_DRIVE_FOLDER_ID || DEFAULT_GOOGLE_DRIVE_FOLDER_ID;
 }
 
-function getDriveClient() {
+async function getDriveClient() {
   const clientEmail = process.env.GOOGLE_DRIVE_CLIENT_EMAIL;
   const privateKey = process.env.GOOGLE_DRIVE_PRIVATE_KEY;
   if (!clientEmail || !privateKey) return null;
 
+  const { google } = await import("googleapis");
   const auth = new google.auth.JWT({
     email: clientEmail,
     key: cleanPrivateKey(privateKey),
@@ -100,7 +99,7 @@ function getDriveClient() {
 }
 
 export function isGoogleDriveConfigured() {
-  return Boolean(getDriveClient());
+  return Boolean(process.env.GOOGLE_DRIVE_CLIENT_EMAIL && process.env.GOOGLE_DRIVE_PRIVATE_KEY);
 }
 
 export function googleDriveImageUrl(fileId: string) {
@@ -125,20 +124,29 @@ async function listPublicGoogleDriveFolder(folderId: string, refreshKey = ""): P
   url.searchParams.set("id", folderId);
   url.searchParams.set("_", refreshKey || String(Date.now()));
 
-  const response = await fetch(`${url.toString()}#grid`, {
-    cache: "no-store",
-    signal: AbortSignal.timeout(15_000),
-    headers: {
-      "Cache-Control": "no-cache",
-      Pragma: "no-cache",
-    },
-  });
-  if (!response.ok) throw new Error("Could not read the public Google Drive folder.");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
+  timeout.unref?.();
 
-  const html = await response.text();
+  let html = "";
+  try {
+    const response = await fetch(`${url.toString()}#grid`, {
+      cache: "no-store",
+      signal: controller.signal,
+      headers: {
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+      },
+    });
+    if (!response.ok) throw new Error("Could not read the public Google Drive folder.");
+    html = await response.text();
+  } finally {
+    clearTimeout(timeout);
+  }
+
   const entries = html.split('<div class="flip-entry"').slice(1);
 
-  return entries
+  const parsed = entries
     .map((entry) => {
       const href = decodeHtml(entry.match(/<a href="([^"]+)"/)?.[1] ?? "");
       const name = decodeHtml(entry.match(/<div class="flip-entry-title">([\s\S]*?)<\/div>/)?.[1] ?? "Untitled");
@@ -157,6 +165,8 @@ async function listPublicGoogleDriveFolder(folderId: string, refreshKey = ""): P
       } satisfies DriveBrowserItem;
     })
     .filter((item): item is DriveBrowserItem => Boolean(item));
+
+  return [...new Map(parsed.map((item) => [item.id, item])).values()];
 }
 
 export async function listGoogleDriveFolder(folderId = getRootFolderId(), refreshKey = ""): Promise<DriveBrowserItem[]> {
@@ -167,7 +177,7 @@ export async function listGoogleDriveFolder(folderId = getRootFolderId(), refres
 }
 
 export async function makeGoogleDriveFilePublic(fileId: string) {
-  const drive = getDriveClient();
+  const drive = await getDriveClient();
   if (!drive) return;
 
   try {
@@ -186,7 +196,7 @@ export async function makeGoogleDriveFilePublic(fileId: string) {
 }
 
 export async function uploadToGoogleDrive({ fileName, mimeType, bytes }: DriveUploadInput): Promise<DriveUploadResult | null> {
-  const drive = getDriveClient();
+  const drive = await getDriveClient();
   if (!drive) return null;
 
   const created = await drive.files.create({
