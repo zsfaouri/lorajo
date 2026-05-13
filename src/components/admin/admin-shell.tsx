@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   CalendarDays,
   Images,
@@ -78,13 +78,9 @@ const nav = navGroups.flatMap((group) => group.items);
 
 export function AdminShell({ children, className }: { children: React.ReactNode; className?: string }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const activeFolder = searchParams.get("folder") ?? "";
 
   function isActive(item: (typeof nav)[number]) {
     const hrefPath = item.href.split("?")[0];
-    if ("folder" in item && item.folder) return pathname === "/admin/media" && activeFolder === item.folder;
-    if (hrefPath === "/admin/media") return pathname === "/admin/media" && !activeFolder;
     return pathname === hrefPath || (hrefPath !== "/admin" && pathname.startsWith(`${hrefPath}/`));
   }
 

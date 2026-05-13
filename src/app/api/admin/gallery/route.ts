@@ -1,10 +1,15 @@
 import { error, ok, requireAdminApi, requirePrisma } from "@/lib/api-utils";
+import { syncDriveGalleryToDatabase } from "@/lib/drive-gallery";
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export async function GET() {
   const session = await requireAdminApi();
   if (!session) return error("Unauthorized", 401);
   const prisma = requirePrisma();
   if (!prisma) return error("Database is not configured", 503);
+  await syncDriveGalleryToDatabase(prisma).catch(() => null);
   return ok(
     await prisma.galleryCollection.findMany({
       where: { slug: { not: "hero-pics" } },

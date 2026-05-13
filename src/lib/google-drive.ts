@@ -119,13 +119,49 @@ function getFileIdFromHref(href: string) {
   return href.match(/\/file\/d\/([^/]+)/)?.[1] ?? href.match(/\/drive\/folders\/([^/?#"]+)/)?.[1] ?? "";
 }
 
+async function listGoogleDriveApiFolder(folderId: string): Promise<DriveBrowserItem[]> {
+  const drive = await getDriveClient();
+  if (!drive) return [];
+
+  const response = await drive.files.list({
+    q: `'${folderId}' in parents and trashed = false`,
+    fields: "files(id,name,mimeType,webViewLink,thumbnailLink)",
+    orderBy: "folder,name",
+    pageSize: 1000,
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
+  });
+
+  return (response.data.files ?? []).flatMap((file) => {
+    const id = file.id;
+    const name = file.name ?? "Untitled";
+    const mimeType = file.mimeType ?? "";
+    if (!id) return [];
+
+    const isFolder = mimeType === "application/vnd.google-apps.folder";
+    const isImage = mimeType.startsWith("image/");
+    if (!isFolder && !isImage) return [];
+
+    return [
+      {
+        id,
+        name,
+        mimeType,
+        type: isFolder ? "folder" : "image",
+        url: file.webViewLink ?? (isFolder ? `https://drive.google.com/drive/folders/${id}` : `https://drive.google.com/file/d/${id}/view`),
+        thumbnailUrl: isFolder ? null : googleDriveImageUrl(id),
+      } satisfies DriveBrowserItem,
+    ];
+  });
+}
+
 async function listPublicGoogleDriveFolder(folderId: string, refreshKey = ""): Promise<DriveBrowserItem[]> {
   const url = new URL("https://drive.google.com/embeddedfolderview");
   url.searchParams.set("id", folderId);
   url.searchParams.set("_", refreshKey || String(Date.now()));
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15_000);
+  const timeout = setTimeout(() => controller.abort(), 8_000);
   timeout.unref?.();
 
   let html = "";
@@ -170,6 +206,9 @@ async function listPublicGoogleDriveFolder(folderId: string, refreshKey = ""): P
 }
 
 export async function listGoogleDriveFolder(folderId = getRootFolderId(), refreshKey = ""): Promise<DriveBrowserItem[]> {
+  const apiItems = await listGoogleDriveApiFolder(folderId).catch(() => []);
+  if (apiItems.length > 0) return apiItems;
+
   const publicItems = await listPublicGoogleDriveFolder(folderId, refreshKey).catch(() => []);
   if (publicItems.length > 0) return publicItems;
   if (folderId === DEFAULT_GOOGLE_DRIVE_FOLDER_ID) return KNOWN_ROOT_FOLDERS;
