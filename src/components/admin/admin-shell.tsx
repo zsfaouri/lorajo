@@ -104,10 +104,9 @@ export function AdminShell({ children, className }: { children: React.ReactNode;
                 const Icon = item.icon;
                 const active = isActive(item);
                 return (
-                  <Link
+                  <a
                     key={item.href + item.label}
                     href={item.href}
-                    prefetch={false}
                     className={cn(
                       "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-[var(--color-heritage-green)]/8 hover:text-[var(--color-heritage-green)]",
                       active ? "admin-active bg-[var(--color-heritage-green)] text-white" : "text-black/62",
@@ -115,7 +114,7 @@ export function AdminShell({ children, className }: { children: React.ReactNode;
                   >
                     <Icon size={16} />
                     {item.label}
-                  </Link>
+                  </a>
                 );
               })}
             </section>
@@ -136,17 +135,16 @@ export function AdminShell({ children, className }: { children: React.ReactNode;
           {nav.map((item) => {
             const active = isActive(item);
             return (
-              <Link
+              <a
                 key={`mobile-${item.href}`}
                 href={item.href}
-                prefetch={false}
                 className={cn(
                   "shrink-0 rounded-full border px-3 py-2 text-xs uppercase tracking-[0.12em]",
                   active ? "admin-active border-[var(--color-heritage-green)] bg-[var(--color-heritage-green)] text-white" : "border-black/10 text-black/58",
                 )}
               >
                 {item.label}
-              </Link>
+              </a>
             );
           })}
         </nav>
