@@ -102,7 +102,7 @@ export default async function AdminDashboardPage() {
         {workflows.map((item) => {
           const Icon = item.icon;
           return (
-            <Link key={item.title} href={item.href}>
+            <Link key={item.title} href={item.href} prefetch={false}>
               <Card className="h-full border-black/10 bg-white/70 text-black shadow-sm transition-colors hover:border-[var(--color-heritage-green)]/35 hover:bg-white">
                 <CardHeader>
                   <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[var(--color-heritage-green)] text-white">
