@@ -21,8 +21,12 @@ type SeoPage = {
   updatedAt?: Date;
 };
 
+function cleanUrl(value: string) {
+  return value.trim().replace(/\s+/g, "").replace(/\/+$/, "");
+}
+
 export function siteUrl() {
-  return (process.env.NEXT_PUBLIC_SITE_URL ?? "https://lora-website-cyan.vercel.app").replace(/\/+$/, "");
+  return cleanUrl(process.env.NEXT_PUBLIC_SITE_URL ?? "https://lora-website-cyan.vercel.app");
 }
 
 export function pagePath(locale: LocaleCode, slug: string) {
@@ -30,8 +34,9 @@ export function pagePath(locale: LocaleCode, slug: string) {
 }
 
 export function absoluteUrl(path: string) {
-  if (/^https?:\/\//i.test(path)) return path;
-  return `${siteUrl()}${path.startsWith("/") ? path : `/${path}`}`;
+  const cleanPath = path.trim();
+  if (/^https?:\/\//i.test(cleanPath)) return cleanUrl(cleanPath);
+  return `${siteUrl()}${cleanPath.startsWith("/") ? cleanPath : `/${cleanPath}`}`;
 }
 
 export function pageUrl(locale: LocaleCode, slug: string) {
