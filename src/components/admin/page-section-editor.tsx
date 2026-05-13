@@ -36,6 +36,7 @@ type PageMeta = {
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED" | string;
   seoTitle?: string | null;
   seoDescription?: string | null;
+  seoImage?: string | null;
 };
 
 type EditableSection = Omit<Section, "content" | "settings" | "spacing" | "background"> & {
@@ -195,7 +196,7 @@ export function PageSectionEditor({
   const [status, setStatus] = useState<Record<string, string>>({});
   const [pageStatus, setPageStatus] = useState("");
   const [pageDraft, setPageDraft] = useState<PageMeta>(
-    page ?? { id: pageId, locale: "EN", title: pageTitle, slug: "", status: "DRAFT", seoTitle: "", seoDescription: "" },
+    page ?? { id: pageId, locale: "EN", title: pageTitle, slug: "", status: "DRAFT", seoTitle: "", seoDescription: "", seoImage: "" },
   );
   const activeSection = sectionList.find((section) => section.id === activeId) ?? sectionList[0];
 
@@ -235,6 +236,7 @@ export function PageSectionEditor({
         slug: makeSlug(pageDraft.slug || pageDraft.title),
         seoTitle: pageDraft.seoTitle || null,
         seoDescription: pageDraft.seoDescription || null,
+        seoImage: pageDraft.seoImage || null,
         status: pageDraft.status === "PUBLISHED" || pageDraft.status === "ARCHIVED" ? pageDraft.status : "DRAFT",
       }),
     });
@@ -338,6 +340,14 @@ export function PageSectionEditor({
             <Field label="SEO description">
               <Textarea value={pageDraft.seoDescription ?? ""} onChange={(event) => setPageDraft((current) => ({ ...current, seoDescription: event.target.value }))} className="min-h-24 border-white/15 bg-white/8 text-white" />
             </Field>
+            <DriveImagePicker
+              assets={mediaAssets}
+              selectedUrls={pageDraft.seoImage ? [pageDraft.seoImage] : []}
+              compact
+              title="SEO social image"
+              description="Used when this page is shared on Google, Facebook, WhatsApp, and social platforms."
+              onPick={(asset) => setPageDraft((current) => ({ ...current, seoImage: asset.url }))}
+            />
             <Field label="Status">
               <select
                 value={pageDraft.status}

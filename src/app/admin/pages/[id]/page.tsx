@@ -29,6 +29,7 @@ export default async function AdminPageEditor({ params }: { params: Promise<{ id
           status: page.status,
           seoTitle: page.seoTitle,
           seoDescription: page.seoDescription,
+          seoImage: page.seoImage,
         }}
         sections={page.sections}
         mediaAssets={mediaAssets}

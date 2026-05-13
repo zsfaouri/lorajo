@@ -8,6 +8,7 @@ export const pageSchema = z.object({
   title: z.string().min(1),
   seoTitle: z.string().optional().nullable(),
   seoDescription: z.string().optional().nullable(),
+  seoImage: z.string().optional().nullable(),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).default("DRAFT"),
 });
 

@@ -5,6 +5,7 @@ import { PublicHeader } from "@/components/layout/public-header";
 import { SmoothScrollProvider } from "@/components/layout/smooth-scroll-provider";
 import { getFooter, getNavigation } from "@/lib/cms-data";
 import { locales, normalizeLocale } from "@/lib/cms-constants";
+import { organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -28,6 +29,8 @@ export default async function LocaleLayout({
         <PublicHeader locale={locale} navigation={navigation} />
         <main>{children}</main>
         <PublicFooter columns={footer} navigation={navigation} />
+        <script type="application/ld+json" suppressHydrationWarning dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd()) }} />
+        <script type="application/ld+json" suppressHydrationWarning dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd()) }} />
       </div>
     </SmoothScrollProvider>
   );
