@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { ExternalLink, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+
+const DRIVE_ROOT_URL = "https://drive.google.com/drive/folders/1JPsc0Lp5TbxU6AoO093NVgyJYaYVmK6v";
 
 type MediaAsset = {
   id: string;
@@ -37,14 +39,6 @@ type GalleryCollection = {
   images: GalleryImage[];
 };
 
-function makeSlug(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
 function SmartImage({ src, alt }: { src: string; alt: string }) {
   return <Image src={src} alt={alt} fill className="object-cover" sizes="(min-width: 1024px) 280px, 50vw" unoptimized />;
 }
@@ -61,7 +55,6 @@ export function GalleryAlbumManager({ initialCollections }: { initialCollections
   const [collections, setCollections] = useState(initialCollections);
   const [activeId, setActiveId] = useState(initialCollections[0]?.id ?? "");
   const [status, setStatus] = useState("");
-  const [newCategory, setNewCategory] = useState({ title: "", slug: "", description: "" });
   const [imageText, setImageText] = useState<Record<string, { alt: string; caption: string }>>(initialImageText(initialCollections));
   const active = useMemo(() => collections.find((collection) => collection.id === activeId) ?? collections[0], [activeId, collections]);
 
@@ -87,30 +80,6 @@ export function GalleryAlbumManager({ initialCollections }: { initialCollections
     }
     await reloadCollections();
     setStatus(`Synced ${json.folders} folders and ${json.images} images from Google Drive.`);
-  }
-
-  async function createCategory() {
-    setStatus("Creating category...");
-    const response = await fetch("/api/admin/gallery", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        locale: "EN",
-        title: newCategory.title,
-        slug: newCategory.slug || makeSlug(newCategory.title),
-        description: newCategory.description,
-        sortOrder: collections.length + 1,
-        status: "PUBLISHED",
-      }),
-    });
-    const json = await response.json();
-    if (!response.ok) {
-      setStatus(json.error ?? "Create failed.");
-      return;
-    }
-    setNewCategory({ title: "", slug: "", description: "" });
-    await reloadCollections(json.id);
-    setStatus("Category created. Create a Google Drive folder with the same name, add images, then sync.");
   }
 
   async function saveImageText(imageId: string) {
@@ -158,28 +127,37 @@ export function GalleryAlbumManager({ initialCollections }: { initialCollections
       <aside className="grid content-start gap-4">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-black/45">Media Cloud</p>
-          <h1 className="mt-3 text-4xl font-medium">Drive categories</h1>
-          <p className="mt-3 text-sm leading-6 text-black/58">Each category is a website tab. Each category is filled from the matching Google Drive folder.</p>
+          <h1 className="mt-3 text-4xl font-medium">Image Cloud</h1>
+          <p className="mt-3 text-sm leading-6 text-black/58">Google Drive is the image database. Every folder inside the Drive root becomes a website tab.</p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Google Drive sync</CardTitle>
-            <CardDescription>Upload files in Drive first. Then sync here to make them editable.</CardDescription>
+            <CardTitle>Source of truth</CardTitle>
+            <CardDescription>Create folders and upload pictures in Google Drive. Click sync to pull them into the admin editor.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3">
-            <Button type="button" variant="admin" onClick={syncDrive} className="justify-center gap-2">
+            <Button type="button" variant="green" onClick={syncDrive} className="justify-center gap-2">
               <RefreshCw size={16} />
               Sync Google Drive
             </Button>
+            <a
+              href={DRIVE_ROOT_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-[var(--radius-button)] border border-[var(--color-heritage-green)] px-5 text-sm font-medium text-[var(--color-heritage-green)] transition-colors hover:bg-[var(--color-heritage-green)] hover:text-white"
+            >
+              <ExternalLink size={16} />
+              Open Drive Folder
+            </a>
             <p className="text-sm text-black/55">{status}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Categories</CardTitle>
-            <CardDescription>{collections.length} website tabs</CardDescription>
+            <CardTitle>Website tabs</CardTitle>
+            <CardDescription>{collections.length} Drive folders synced</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2">
             {collections.map((collection) => (
@@ -205,23 +183,12 @@ export function GalleryAlbumManager({ initialCollections }: { initialCollections
 
         <Card>
           <CardHeader>
-            <CardTitle>Create category</CardTitle>
-            <CardDescription>This creates the website tab. Use the same name for the Google Drive folder.</CardDescription>
+            <CardTitle>Category rule</CardTitle>
+            <CardDescription>No manual database categories. Folder equals tab.</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-3">
-            <Label>Category name</Label>
-            <Input
-              value={newCategory.title}
-              onChange={(event) => setNewCategory((current) => ({ ...current, title: event.target.value, slug: current.slug || makeSlug(event.target.value) }))}
-              placeholder="Famous Figures"
-            />
-            <Label>Website slug</Label>
-            <Input value={newCategory.slug} onChange={(event) => setNewCategory((current) => ({ ...current, slug: event.target.value }))} placeholder="famous-figures" />
-            <Label>Description</Label>
-            <Textarea value={newCategory.description} onChange={(event) => setNewCategory((current) => ({ ...current, description: event.target.value }))} />
-            <Button type="button" variant="outline" onClick={createCategory}>
-              Create category
-            </Button>
+          <CardContent className="grid gap-2 text-sm leading-6 text-black/60">
+            <p>Example: a Drive folder named Famous Figures becomes the Famous Figures website tab.</p>
+            <p>Upload images inside that folder, then press Sync Google Drive.</p>
           </CardContent>
         </Card>
       </aside>
@@ -232,13 +199,13 @@ export function GalleryAlbumManager({ initialCollections }: { initialCollections
             <CardHeader>
               <CardTitle>{active.title}</CardTitle>
               <CardDescription>
-                Edit the name and text for each image in this tab. The image file stays in Google Drive.
+                This tab is powered by its matching Google Drive folder. Edit only the website text here.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">
               {active.images.length === 0 ? (
                 <div className="rounded-md border border-dashed border-black/15 bg-white p-8 text-sm text-black/55">
-                  No images in this category yet. Add images to the matching Google Drive folder, then click Sync Google Drive.
+                  No images in this tab yet. Add images to the matching Google Drive folder, then click Sync Google Drive.
                 </div>
               ) : null}
 
@@ -274,7 +241,7 @@ export function GalleryAlbumManager({ initialCollections }: { initialCollections
                       />
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <Button type="button" variant="admin" size="sm" onClick={() => saveImageText(image.id)}>
+                      <Button type="button" variant="green" size="sm" onClick={() => saveImageText(image.id)}>
                         Save text
                       </Button>
                       <Button type="button" variant="outline" size="sm" onClick={() => removeImage(image.id)}>

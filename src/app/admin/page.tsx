@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, FileText, GalleryHorizontalEnd, Images, ShieldCheck, Users } from "lucide-react";
+import { CalendarDays, FileText, GalleryHorizontalEnd, ShieldCheck, Users } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getGalleryCollections, getMembers, getPagesForAdmin } from "@/lib/cms-data";
@@ -19,16 +19,10 @@ const workflows = [
     icon: Users,
   },
   {
-    title: "Photo Gallery",
-    description: "Create albums, choose an album, upload images, edit text, and remove items.",
-    href: "/admin/gallery",
-    icon: GalleryHorizontalEnd,
-  },
-  {
-    title: "Media Cloud",
-    description: "Bulk upload images once, sort them into categories, and reuse them anywhere.",
+    title: "Image Cloud",
+    description: "Google Drive folders become website tabs. Sync folders, then edit picture text.",
     href: "/admin/media",
-    icon: Images,
+    icon: GalleryHorizontalEnd,
   },
   {
     title: "Events and Announcements",
@@ -55,7 +49,7 @@ export default async function AdminDashboardPage() {
   const stats = [
     { label: "Pages", value: pages.length },
     { label: "Founding members", value: members.length },
-    { label: "Gallery albums", value: collections.length },
+    { label: "Drive tabs", value: collections.length },
     { label: "Mode", value: "Draft / Live" },
   ];
 
