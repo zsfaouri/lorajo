@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, FileText, GalleryHorizontalEnd, ShieldCheck, Users } from "lucide-react";
+import { CalendarDays, ContactRound, FileText, FolderPlus, GalleryHorizontalEnd, Images, ShieldCheck } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getGalleryCollections, getMembers, getPagesForAdmin } from "@/lib/cms-data";
@@ -8,27 +8,45 @@ import { requireAdmin } from "@/lib/admin-auth";
 const workflows = [
   {
     title: "Create New Page",
-    description: "Add text, images, events, announcements, and reusable sections.",
+    description: "Create pages, edit existing pages, add text, photos, videos, forms, events, and announcement sections.",
     href: "/admin/pages",
     icon: FileText,
   },
   {
-    title: "Who We Are",
-    description: "Control the public text, pictures, and sections for the Who We Are page.",
-    href: "/admin/who-we-are",
-    icon: Users,
+    title: "Image Cloud",
+    description: "Google Drive folders power website image folders. Famous Figures, Founding Members, Landmarks, and Historical Pics stay here.",
+    href: "/admin/media",
+    icon: FolderPlus,
   },
   {
-    title: "Image Cloud",
-    description: "Google Drive folders become website tabs. Sync folders, then edit picture text.",
-    href: "/admin/media",
+    title: "Hero Gallery",
+    description: "Edit hero images separately from the public photo gallery.",
+    href: "/admin/hero-pics",
+    icon: Images,
+  },
+  {
+    title: "Who We Are",
+    description: "Open the Who We Are page editor. Edit text, media, sections, forms, and layout.",
+    href: "/admin/who-we-are",
+    icon: ContactRound,
+  },
+  {
+    title: "What We Do",
+    description: "Open the What We Do page editor. Edit images, copy, videos, and page sections.",
+    href: "/admin/what-we-do",
     icon: GalleryHorizontalEnd,
   },
   {
-    title: "Events and Announcements",
-    description: "Create public updates with dates, images, locations, and action links.",
+    title: "Create Event",
+    description: "Create events with title, date, Drive image, video, invitation link, location, and details.",
     href: "/admin/events",
     icon: CalendarDays,
+  },
+  {
+    title: "Announcements",
+    description: "Create announcements that can be surfaced on pages.",
+    href: "/admin/announcements",
+    icon: FileText,
   },
   {
     title: "Admin Control",

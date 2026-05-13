@@ -89,5 +89,17 @@ export type EventDto = {
   endsAt?: string | null;
   location?: string | null;
   actionLabel?: string | null;
+  invitationUrl?: string | null;
+  videoUrl?: string | null;
+  image?: CmsImage | null;
+};
+
+export type ArticleDto = {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt?: string | null;
+  body?: string | null;
+  publishedAt?: string | null;
   image?: CmsImage | null;
 };

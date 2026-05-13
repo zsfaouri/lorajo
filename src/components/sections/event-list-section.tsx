@@ -104,6 +104,16 @@ export function EventListSection({ section, events }: { section: CmsSection; eve
               <p className="mt-6 whitespace-pre-line text-base leading-8 text-slate-700">
                 {activeEvent.body ?? activeEvent.summary ?? "Details will be shared by LORA."}
               </p>
+              {activeEvent.videoUrl ? (
+                <a className="mt-5 inline-flex text-sm font-medium text-[var(--color-heritage-green)] underline underline-offset-4" href={activeEvent.videoUrl} target="_blank" rel="noreferrer">
+                  Open video
+                </a>
+              ) : null}
+              {activeEvent.invitationUrl ? (
+                <a className="ml-4 mt-5 inline-flex text-sm font-medium text-[var(--color-heritage-green)] underline underline-offset-4" href={activeEvent.invitationUrl} target="_blank" rel="noreferrer">
+                  Open invitation
+                </a>
+              ) : null}
             </motion.div>
           </motion.div>
         ) : null}

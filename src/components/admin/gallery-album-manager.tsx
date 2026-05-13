@@ -55,6 +55,7 @@ export function GalleryAlbumManager({ initialCollections }: { initialCollections
   const [collections, setCollections] = useState(initialCollections);
   const [activeId, setActiveId] = useState(initialCollections[0]?.id ?? "");
   const [status, setStatus] = useState("");
+  const [newFolderName, setNewFolderName] = useState("");
   const [imageText, setImageText] = useState<Record<string, { alt: string; caption: string }>>(initialImageText(initialCollections));
   const active = useMemo(() => collections.find((collection) => collection.id === activeId) ?? collections[0], [activeId, collections]);
 
@@ -80,6 +81,30 @@ export function GalleryAlbumManager({ initialCollections }: { initialCollections
     }
     await reloadCollections();
     setStatus(`Synced ${json.folders} folders and ${json.images} images from Google Drive.`);
+  }
+
+  async function createDriveFolder() {
+    const name = newFolderName.trim();
+    if (!name) {
+      setStatus("Folder name is required.");
+      return;
+    }
+
+    setStatus("Creating Google Drive folder...");
+    const response = await fetch("/api/admin/drive", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    const json = await response.json();
+    if (!response.ok) {
+      setStatus(json.error ?? "Could not create Drive folder.");
+      return;
+    }
+
+    setNewFolderName("");
+    await syncDrive();
+    setStatus(`Created Drive folder: ${json.name ?? name}`);
   }
 
   async function saveImageText(imageId: string) {
@@ -128,7 +153,9 @@ export function GalleryAlbumManager({ initialCollections }: { initialCollections
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-black/45">Media Cloud</p>
           <h1 className="mt-3 text-4xl font-medium">Image Cloud</h1>
-          <p className="mt-3 text-sm leading-6 text-black/58">Google Drive is the image database. Every folder inside the Drive root becomes a website tab.</p>
+          <p className="mt-3 text-sm leading-6 text-black/58">
+            Google Drive is the image database. Photo Gallery folders appear here. Hero images are managed in Hero Gallery.
+          </p>
         </div>
 
         <Card>
@@ -151,6 +178,19 @@ export function GalleryAlbumManager({ initialCollections }: { initialCollections
               Open Drive Folder
             </a>
             <p className="text-sm text-black/55">{status}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Add folder</CardTitle>
+            <CardDescription>Create a Drive folder category, then upload pictures into it from Google Drive.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            <Input value={newFolderName} onChange={(event) => setNewFolderName(event.target.value)} placeholder="Folder name" />
+            <Button type="button" variant="green" onClick={createDriveFolder}>
+              Add Drive folder
+            </Button>
           </CardContent>
         </Card>
 
@@ -188,7 +228,7 @@ export function GalleryAlbumManager({ initialCollections }: { initialCollections
           </CardHeader>
           <CardContent className="grid gap-2 text-sm leading-6 text-black/60">
             <p>Example: a Drive folder named Famous Figures becomes the Famous Figures website tab.</p>
-            <p>Upload images inside that folder, then press Sync Google Drive.</p>
+            <p>Upload images inside that folder, then press Sync Google Drive. Hero stays out of Photo Gallery.</p>
           </CardContent>
         </Card>
       </aside>

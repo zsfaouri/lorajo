@@ -15,6 +15,7 @@ export default async function MediaLibraryPage() {
         },
         orderBy: [{ locale: "asc" }, { sortOrder: "asc" }],
       })
+        .then((collections) => collections.filter((collection) => collection.slug !== "hero-pics"))
     : [];
 
   return <GalleryAlbumManager initialCollections={collections} />;

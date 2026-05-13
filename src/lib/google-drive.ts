@@ -195,6 +195,32 @@ export async function makeGoogleDriveFilePublic(fileId: string) {
   }
 }
 
+export async function createGoogleDriveFolder(name: string, parentFolderId = getRootFolderId()) {
+  const drive = await getDriveClient();
+  if (!drive) return null;
+
+  const created = await drive.files.create({
+    requestBody: {
+      name,
+      mimeType: "application/vnd.google-apps.folder",
+      parents: [parentFolderId],
+    },
+    fields: "id, name, webViewLink",
+    supportsAllDrives: true,
+  });
+
+  const id = created.data.id;
+  if (!id) throw new Error("Google Drive did not return a folder id.");
+
+  await makeGoogleDriveFilePublic(id);
+
+  return {
+    id,
+    name: created.data.name ?? name,
+    url: created.data.webViewLink ?? `https://drive.google.com/drive/folders/${id}`,
+  };
+}
+
 export async function uploadToGoogleDrive({ fileName, mimeType, bytes }: DriveUploadInput): Promise<DriveUploadResult | null> {
   const drive = await getDriveClient();
   if (!drive) return null;

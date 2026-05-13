@@ -15,6 +15,7 @@ import { isRecord } from "@/lib/utils";
 import type {
   CmsPage,
   EventDto,
+  ArticleDto,
   FooterColumnDto,
   GalleryCollectionDto,
   LocaleCode,
@@ -156,6 +157,8 @@ export async function getEvents(locale: LocaleCode): Promise<EventDto[]> {
         endsAt: event.endsAt?.toISOString() ?? null,
         location: event.location,
         actionLabel: typeof content.actionLabel === "string" ? content.actionLabel : null,
+        invitationUrl: typeof content.invitationUrl === "string" ? content.invitationUrl : null,
+        videoUrl: typeof content.videoUrl === "string" ? content.videoUrl : null,
         image: event.mediaAsset
           ? {
               src: event.mediaAsset.url,
@@ -167,6 +170,45 @@ export async function getEvents(locale: LocaleCode): Promise<EventDto[]> {
                 src: imageUrl,
                 alt: imageAlt,
               }
+            : null,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function getArticles(locale: LocaleCode): Promise<ArticleDto[]> {
+  noStore();
+  const prisma = getPrisma();
+  if (!prisma) return [];
+
+  try {
+    const articles = await prisma.article.findMany({
+      where: { locale: toPrismaLocale(locale), status: PublishState.PUBLISHED },
+      include: { mediaAsset: true },
+      orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+    });
+
+    return articles.map((article) => {
+      const content = asRecord(article.content);
+      const imageUrl = typeof content.imageUrl === "string" ? content.imageUrl : null;
+      const imageAlt = typeof content.imageAlt === "string" ? content.imageAlt : article.title;
+      return {
+        id: article.id,
+        title: article.title,
+        slug: article.slug,
+        excerpt: article.excerpt,
+        body: typeof content.body === "string" ? content.body : null,
+        publishedAt: article.publishedAt?.toISOString() ?? null,
+        image: article.mediaAsset
+          ? {
+              src: article.mediaAsset.url,
+              alt: article.mediaAsset.alt ?? article.title,
+              caption: article.mediaAsset.caption ?? undefined,
+            }
+          : imageUrl
+            ? { src: imageUrl, alt: imageAlt }
             : null,
       };
     });

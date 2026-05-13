@@ -90,8 +90,8 @@ export function HeroPicsManager({
   return (
     <div className="grid gap-6">
       <div>
-        <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-heritage-green)]">Hero Pics</p>
-        <h1 className="mt-3 text-4xl font-medium">Hero pictures</h1>
+        <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-heritage-green)]">Hero Gallery</p>
+        <h1 className="mt-3 text-4xl font-medium">Hero gallery</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-black/55">
           Hero pictures come from the Google Drive hero folder. Add files to Drive, sync, choose images, then save.
         </p>

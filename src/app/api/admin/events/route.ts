@@ -10,6 +10,8 @@ const eventSchema = contentEntrySchema.extend({
   location: z.string().optional().nullable(),
   imageUrl: z.string().min(1).optional().nullable(),
   imageAlt: z.string().optional().nullable(),
+  videoUrl: z.string().optional().nullable(),
+  invitationUrl: z.string().optional().nullable(),
   actionLabel: z.string().optional().nullable(),
 });
 
@@ -29,7 +31,7 @@ export async function POST(request: Request) {
   const { data, response } = await parseJson(request, eventSchema);
   if (response) return response;
 
-  const { imageUrl, imageAlt, actionLabel, content, ...eventData } = data;
+  const { imageUrl, imageAlt, videoUrl, invitationUrl, actionLabel, content, ...eventData } = data;
   const event = await prisma.event.create({
     data: {
       ...eventData,
@@ -37,6 +39,8 @@ export async function POST(request: Request) {
         ...content,
         ...(imageUrl ? { imageUrl } : {}),
         ...(imageAlt ? { imageAlt } : {}),
+        ...(videoUrl ? { videoUrl } : {}),
+        ...(invitationUrl ? { invitationUrl } : {}),
         ...(actionLabel ? { actionLabel } : {}),
       }),
       status: eventData.status as PublishState,

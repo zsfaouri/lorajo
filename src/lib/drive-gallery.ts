@@ -63,7 +63,7 @@ export async function getDriveGalleryCollections(): Promise<GalleryCollectionDto
     }),
   );
 
-  return collections.filter((collection) => collection.images.length > 0);
+  return collections.filter((collection) => collection.slug !== "hero-pics" && collection.images.length > 0);
 }
 
 export async function syncDriveGalleryToDatabase(prisma: PrismaClient) {

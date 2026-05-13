@@ -5,7 +5,13 @@ export async function GET() {
   if (!session) return error("Unauthorized", 401);
   const prisma = requirePrisma();
   if (!prisma) return error("Database is not configured", 503);
-  return ok(await prisma.galleryCollection.findMany({ include: { images: { include: { mediaAsset: true }, orderBy: { sortOrder: "asc" } } }, orderBy: [{ locale: "asc" }, { sortOrder: "asc" }] }));
+  return ok(
+    await prisma.galleryCollection.findMany({
+      where: { slug: { not: "hero-pics" } },
+      include: { images: { include: { mediaAsset: true }, orderBy: { sortOrder: "asc" } } },
+      orderBy: [{ locale: "asc" }, { sortOrder: "asc" }],
+    }),
+  );
 }
 
 export async function POST() {

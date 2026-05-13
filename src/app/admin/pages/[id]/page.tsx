@@ -17,7 +17,23 @@ export default async function AdminPageEditor({ params }: { params: Promise<{ id
       listAdminMedia(),
     ]);
     if (!page) notFound();
-    return <PageSectionEditor pageId={page.id} pageTitle={page.title} sections={page.sections} mediaAssets={mediaAssets} />;
+    return (
+      <PageSectionEditor
+        pageId={page.id}
+        pageTitle={page.title}
+        page={{
+          id: page.id,
+          locale: page.locale,
+          title: page.title,
+          slug: page.slug,
+          status: page.status,
+          seoTitle: page.seoTitle,
+          seoDescription: page.seoDescription,
+        }}
+        sections={page.sections}
+        mediaAssets={mediaAssets}
+      />
+    );
   }
 
   const page = Object.values(fallbackPages)
@@ -25,5 +41,5 @@ export default async function AdminPageEditor({ params }: { params: Promise<{ id
     .find((item) => item.id === id);
   if (!page) notFound();
 
-  return <PageSectionEditor pageId={page.id} pageTitle={page.title} sections={page.sections} mediaAssets={[]} />;
+  return <PageSectionEditor pageId={page.id} pageTitle={page.title} page={page} sections={page.sections} mediaAssets={[]} />;
 }

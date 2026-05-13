@@ -10,6 +10,8 @@ const eventSchema = contentEntrySchema.extend({
   location: z.string().optional().nullable(),
   imageUrl: z.string().min(1).optional().nullable(),
   imageAlt: z.string().optional().nullable(),
+  videoUrl: z.string().optional().nullable(),
+  invitationUrl: z.string().optional().nullable(),
   actionLabel: z.string().optional().nullable(),
 });
 
@@ -22,13 +24,15 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
   const { data, response } = await parseJson(request, eventSchema.partial());
   if (response) return response;
 
-  const { imageUrl, imageAlt, actionLabel, content, ...eventData } = data;
+  const { imageUrl, imageAlt, videoUrl, invitationUrl, actionLabel, content, ...eventData } = data;
   const nextContent =
-    content || imageUrl || imageAlt || actionLabel
+    content || imageUrl || imageAlt || videoUrl || invitationUrl || actionLabel
       ? {
           ...(content ?? {}),
           ...(imageUrl ? { imageUrl } : {}),
           ...(imageAlt ? { imageAlt } : {}),
+          ...(videoUrl ? { videoUrl } : {}),
+          ...(invitationUrl ? { invitationUrl } : {}),
           ...(actionLabel ? { actionLabel } : {}),
         }
       : undefined;

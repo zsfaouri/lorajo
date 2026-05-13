@@ -57,7 +57,7 @@ function normalizePayload(fields: FieldConfig[], values: Record<string, string>)
       continue;
     }
 
-    if (field.name === "imageUrl" || field.name === "imageAlt" || field.name === "actionLabel") {
+    if (["imageUrl", "imageAlt", "actionLabel", "videoUrl", "invitationUrl"].includes(field.name)) {
       payload[field.name] = value;
       contentExtras[field.name] = value;
       continue;
@@ -160,6 +160,18 @@ export function AdminResourceManager({
     });
   }
 
+  async function deleteItem(item: ResourceItem) {
+    setStatus("Deleting...");
+    const response = await fetch(`${endpoint}/${item.id}`, { method: "DELETE" });
+    const json = await response.json();
+    if (!response.ok) {
+      setStatus(json.error ?? "Delete failed");
+      return;
+    }
+    setItems((current) => current.filter((currentItem) => currentItem.id !== item.id));
+    setStatus("Deleted");
+  }
+
   return (
     <div className="grid gap-6 xl:grid-cols-[0.82fr_1.18fr]">
       <section className="grid gap-4">
@@ -258,6 +270,9 @@ export function AdminResourceManager({
                       Preview
                     </a>
                   ) : null}
+                  <button type="button" className="text-sm text-red-200 hover:text-red-100" onClick={() => void deleteItem(item)}>
+                    Delete
+                  </button>
                 </div>
               </div>
               {item.summary ? <p className="mt-3 text-sm leading-6 text-white/52">{String(item.summary)}</p> : null}

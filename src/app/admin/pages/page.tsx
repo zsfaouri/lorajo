@@ -9,7 +9,7 @@ export default async function AdminPagesPage() {
   return (
     <AdminResourceManager
       title="Pages"
-      description="Create bilingual pages, set SEO and draft/publish state. Sections control layout, spacing, theme, backgrounds, media, variants, and interactions."
+      description="Create and manage website pages. After creating a page, open Edit to add text, photos, videos, forms, events, announcements, spacing, backgrounds, and layout sections."
       endpoint="/api/admin/pages"
       previewBasePath="/en"
       editBasePath="/admin/pages"

@@ -1,4 +1,6 @@
+import { AnnouncementListSection } from "@/components/sections/announcement-list-section";
 import { ContactSection } from "@/components/sections/contact-section";
+import { CtaSection } from "@/components/sections/cta-section";
 import { EventListSection } from "@/components/sections/event-list-section";
 import { GalleryCollectionsSection } from "@/components/sections/gallery-collections-section";
 import { GalleryGridSection } from "@/components/sections/gallery-grid-section";
@@ -10,8 +12,9 @@ import { NewsletterSection } from "@/components/sections/newsletter-section";
 import { RichTextSection } from "@/components/sections/rich-text-section";
 import { SectionFrame } from "@/components/sections/section-frame";
 import { TextMarqueeSection } from "@/components/sections/text-marquee-section";
+import { VideoSection } from "@/components/sections/video-section";
 import { VideoScrollHeroSection } from "@/components/sections/video-scroll-hero-section";
-import { getEvents, getGalleryCollections, getMembers } from "@/lib/cms-data";
+import { getArticles, getEvents, getGalleryCollections, getMembers } from "@/lib/cms-data";
 import type { CmsSection, LocaleCode } from "@/types/cms";
 
 export async function SectionRenderer({ section, locale }: { section: CmsSection; locale: LocaleCode }) {
@@ -22,6 +25,8 @@ export async function SectionRenderer({ section, locale }: { section: CmsSection
       return <HeroSection section={section} />;
     case "video_scroll_hero":
       return <VideoScrollHeroSection section={section} />;
+    case "video":
+      return <VideoSection section={section} />;
     case "rich_text":
       return <RichTextSection section={section} />;
     case "heritage_story":
@@ -43,6 +48,12 @@ export async function SectionRenderer({ section, locale }: { section: CmsSection
       const events = await getEvents(locale);
       return <EventListSection section={section} events={events} />;
     }
+    case "announcement_list": {
+      const articles = await getArticles(locale);
+      return <AnnouncementListSection section={section} articles={articles} />;
+    }
+    case "cta":
+      return <CtaSection section={section} />;
     case "newsletter_signup":
       return <NewsletterSection section={section} />;
     case "contact_form":

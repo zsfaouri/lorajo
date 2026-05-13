@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState, type ReactNode } from "react";
 
 import { DriveImagePicker, type DriveMediaAsset } from "@/components/admin/drive-image-picker";
@@ -27,6 +28,16 @@ type Section = {
   alignment?: string | null;
 };
 
+type PageMeta = {
+  id: string;
+  locale: "EN" | "AR" | string;
+  title: string;
+  slug: string;
+  status: "DRAFT" | "PUBLISHED" | "ARCHIVED" | string;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+};
+
 type EditableSection = Omit<Section, "content" | "settings" | "spacing" | "background"> & {
   content: Record<string, unknown>;
   settings: Record<string, unknown>;
@@ -39,10 +50,12 @@ const sectionTypeOptions = [
   ["video_scroll_hero", "Video scroll hero"],
   ["rich_text", "Text section"],
   ["image_text", "Image + text"],
+  ["video", "Video"],
   ["gallery_grid", "Image gallery"],
   ["gallery_masonry", "Photo gallery page"],
   ["member_grid", "Members"],
   ["event_list", "Events"],
+  ["announcement_list", "Announcements"],
   ["cta", "Call to action"],
   ["contact_form", "Contact form"],
   ["newsletter_signup", "Newsletter signup"],
@@ -66,6 +79,10 @@ const variantOptions: Record<string, Array<[string, string]>> = {
     ["overlapping_editorial", "Overlapping editorial"],
     ["full_bleed_image", "Full bleed image"],
   ],
+  video: [
+    ["embedded", "Embedded video"],
+    ["direct_file", "Direct video file"],
+  ],
   gallery_grid: [
     ["lightbox_grid", "Lightbox grid"],
     ["masonry", "Masonry"],
@@ -81,6 +98,10 @@ const variantOptions: Record<string, Array<[string, string]>> = {
     ["editorial_portraits", "Editorial portraits"],
     ["clean_cards", "Clean cards"],
     ["compact_list", "Compact list"],
+  ],
+  announcement_list: [
+    ["cards", "Cards"],
+    ["list", "List"],
   ],
 };
 
@@ -134,21 +155,48 @@ function sectionVariantOptions(type: string) {
   return variantOptions[type] ?? [["default", "Default"]];
 }
 
+function defaultContentForType(type: string) {
+  if (type === "video") return { title: "Video section", body: "", videoUrl: "", image: "" };
+  if (type === "contact_form") return { title: "Contact LORA", body: "" };
+  if (type === "newsletter_signup") return { title: "Newsletter", body: "", buttonLabel: "Subscribe" };
+  if (type === "event_list") return { title: "Events", subtitle: "Upcoming gatherings, meetings, and neighborhood programs." };
+  if (type === "announcement_list") return { title: "Announcements", subtitle: "Latest updates from LORA." };
+  if (type === "gallery_grid") return { title: "Image gallery", items: [] };
+  if (type === "image_text") return { title: "New section", body: "", image: "" };
+  if (type === "cta") return { title: "Call to action", body: "", cta: { label: "Open", href: "/" } };
+  return { title: "New section", body: "" };
+}
+
+function makeSlug(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 export function PageSectionEditor({
   pageId,
   pageTitle,
+  page,
   sections,
   mediaAssets,
 }: {
   pageId: string;
   pageTitle: string;
+  page?: PageMeta;
   sections: Section[];
   mediaAssets: MediaAsset[];
 }) {
+  const router = useRouter();
   const initialSections = useMemo(() => sections.map(asEditableSection), [sections]);
   const [sectionList, setSectionList] = useState(initialSections);
   const [activeId, setActiveId] = useState(initialSections[0]?.id ?? "");
   const [status, setStatus] = useState<Record<string, string>>({});
+  const [pageStatus, setPageStatus] = useState("");
+  const [pageDraft, setPageDraft] = useState<PageMeta>(
+    page ?? { id: pageId, locale: "EN", title: pageTitle, slug: "", status: "DRAFT", seoTitle: "", seoDescription: "" },
+  );
   const activeSection = sectionList.find((section) => section.id === activeId) ?? sectionList[0];
 
   function updateSection(sectionId: string, updater: (section: EditableSection) => EditableSection) {
@@ -176,6 +224,41 @@ export function PageSectionEditor({
     setStatus((current) => ({ ...current, [section.id]: response.ok ? "Saved" : json.error ?? "Save failed" }));
   }
 
+  async function savePage() {
+    setPageStatus("Saving page...");
+    const response = await fetch(`/api/admin/pages/${pageId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        locale: pageDraft.locale === "AR" ? "AR" : "EN",
+        title: pageDraft.title.trim(),
+        slug: makeSlug(pageDraft.slug || pageDraft.title),
+        seoTitle: pageDraft.seoTitle || null,
+        seoDescription: pageDraft.seoDescription || null,
+        status: pageDraft.status === "PUBLISHED" || pageDraft.status === "ARCHIVED" ? pageDraft.status : "DRAFT",
+      }),
+    });
+    const json = await response.json();
+    if (!response.ok) {
+      setPageStatus(json.error ?? "Page save failed");
+      return;
+    }
+    setPageDraft((current) => ({ ...current, ...json }));
+    setPageStatus("Page saved");
+  }
+
+  async function deletePage() {
+    if (!window.confirm("Delete this page and all of its sections?")) return;
+    setPageStatus("Deleting page...");
+    const response = await fetch(`/api/admin/pages/${pageId}`, { method: "DELETE" });
+    const json = await response.json();
+    if (!response.ok) {
+      setPageStatus(json.error ?? "Page delete failed");
+      return;
+    }
+    router.push("/admin/pages");
+  }
+
   async function addSection(type = "rich_text") {
     setStatus((current) => ({ ...current, new: "Adding..." }));
     const nextSort = Math.max(0, ...sectionList.map((section) => section.sortOrder)) + 1;
@@ -187,7 +270,7 @@ export function PageSectionEditor({
         variant: sectionVariantOptions(type)[0][0],
         sortOrder: nextSort,
         isVisible: true,
-        content: { title: "New section", body: "" },
+        content: defaultContentForType(type),
         settings: {},
         spacing: {},
         background: {},
@@ -203,6 +286,18 @@ export function PageSectionEditor({
     setSectionList((current) => [...current, section].sort((a, b) => a.sortOrder - b.sortOrder));
     setActiveId(section.id);
     setStatus((current) => ({ ...current, new: "Added" }));
+  }
+
+  async function deleteSection(sectionId: string) {
+    setStatus((current) => ({ ...current, [sectionId]: "Deleting..." }));
+    const response = await fetch(`/api/admin/sections/${sectionId}`, { method: "DELETE" });
+    const json = await response.json();
+    if (!response.ok) {
+      setStatus((current) => ({ ...current, [sectionId]: json.error ?? "Delete failed" }));
+      return;
+    }
+    setSectionList((current) => current.filter((section) => section.id !== sectionId));
+    setActiveId((current) => (current === sectionId ? sectionList.find((section) => section.id !== sectionId)?.id ?? "" : current));
   }
 
   if (!activeSection) {
@@ -222,8 +317,49 @@ export function PageSectionEditor({
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-white/40">Page editor</p>
           <h1 className="mt-3 text-3xl font-medium">{pageTitle}</h1>
-          <p className="mt-3 text-sm leading-6 text-white/48">Click a section. Edit text. Pick or drop images. Save.</p>
+          <p className="mt-3 text-sm leading-6 text-white/48">Edit page settings. Add sections. Choose images from Drive. Add videos and forms.</p>
         </div>
+
+        <Card className="border-white/10 bg-white/[0.04] text-white">
+          <CardHeader>
+            <CardTitle>Page settings</CardTitle>
+            <CardDescription className="text-white/45">Title, URL, SEO, status, and deletion.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            <Field label="Page title">
+              <Input value={pageDraft.title} onChange={(event) => setPageDraft((current) => ({ ...current, title: event.target.value }))} className="border-white/15 bg-white/8 text-white" />
+            </Field>
+            <Field label="URL slug">
+              <Input value={pageDraft.slug} onChange={(event) => setPageDraft((current) => ({ ...current, slug: makeSlug(event.target.value) }))} className="border-white/15 bg-white/8 text-white" />
+            </Field>
+            <Field label="SEO title">
+              <Input value={pageDraft.seoTitle ?? ""} onChange={(event) => setPageDraft((current) => ({ ...current, seoTitle: event.target.value }))} className="border-white/15 bg-white/8 text-white" />
+            </Field>
+            <Field label="SEO description">
+              <Textarea value={pageDraft.seoDescription ?? ""} onChange={(event) => setPageDraft((current) => ({ ...current, seoDescription: event.target.value }))} className="min-h-24 border-white/15 bg-white/8 text-white" />
+            </Field>
+            <Field label="Status">
+              <select
+                value={pageDraft.status}
+                onChange={(event) => setPageDraft((current) => ({ ...current, status: event.target.value }))}
+                className="h-10 rounded-md border border-white/15 bg-[#151515] px-3 text-sm text-white"
+              >
+                <option value="DRAFT">Draft</option>
+                <option value="PUBLISHED">Published</option>
+                <option value="ARCHIVED">Archived</option>
+              </select>
+            </Field>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="admin" size="sm" onClick={savePage}>
+                Save page
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={deletePage} className="border-red-400/50 text-red-200 hover:bg-red-500 hover:text-white">
+                Delete page
+              </Button>
+            </div>
+            <span className="text-sm text-white/45">{pageStatus}</span>
+          </CardContent>
+        </Card>
 
         <Card className="border-white/10 bg-white/[0.04] text-white">
           <CardHeader>
@@ -279,6 +415,7 @@ export function PageSectionEditor({
         status={status[activeSection.id]}
         onChange={(updater) => updateSection(activeSection.id, updater)}
         onSave={() => save(activeSection)}
+        onDelete={() => deleteSection(activeSection.id)}
       />
     </div>
   );
@@ -290,12 +427,14 @@ function SectionForm({
   status,
   onChange,
   onSave,
+  onDelete,
 }: {
   section: EditableSection;
   assets: MediaAsset[];
   status?: string;
   onChange: (updater: (section: EditableSection) => EditableSection) => void;
   onSave: () => void;
+  onDelete: () => void;
 }) {
   function setContent(key: string, value: unknown) {
     onChange((current) => ({ ...current, content: { ...current.content, [key]: value } }));
@@ -325,6 +464,9 @@ function SectionForm({
             <span className="text-sm text-white/45">{status}</span>
             <Button type="button" variant="admin" onClick={onSave}>
               Save changes
+            </Button>
+            <Button type="button" variant="outline" onClick={onDelete} className="border-red-400/50 text-red-200 hover:bg-red-500 hover:text-white">
+              Delete section
             </Button>
           </div>
         </div>
@@ -425,6 +567,54 @@ function SectionForm({
               maxImages={1}
               onChange={(paths) => setContent("image", paths[0] ?? "")}
             />
+          </>
+        ) : null}
+
+        {section.type === "video" ? (
+          <>
+            <Field label="Video URL">
+              <Input
+                value={stringValue(section.content, "videoUrl")}
+                onChange={(event) => setContent("videoUrl", event.target.value)}
+                placeholder="YouTube, Vimeo, Google Drive, or direct MP4 URL"
+                className="border-white/15 bg-white/8 text-white"
+              />
+            </Field>
+            <Field label="Video text">
+              <Textarea value={stringValue(section.content, "body")} onChange={(event) => setContent("body", event.target.value)} className="min-h-28 border-white/15 bg-white/8 text-white" />
+            </Field>
+            <ImageListEditor
+              title="Poster image"
+              description="Choose a Drive image to use as the poster or fallback visual."
+              images={stringValue(section.content, "image") ? [stringValue(section.content, "image")] : []}
+              assets={assets}
+              maxImages={1}
+              onChange={(paths) => setContent("image", paths[0] ?? "")}
+            />
+          </>
+        ) : null}
+
+        {section.type === "cta" ? (
+          <>
+            <Field label="Text">
+              <Textarea value={stringValue(section.content, "body")} onChange={(event) => setContent("body", event.target.value)} className="min-h-28 border-white/15 bg-white/8 text-white" />
+            </Field>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="Button label">
+                <Input
+                  value={ctaValue(section.content.cta).label}
+                  onChange={(event) => setContent("cta", { ...ctaValue(section.content.cta), label: event.target.value })}
+                  className="border-white/15 bg-white/8 text-white"
+                />
+              </Field>
+              <Field label="Button link">
+                <Input
+                  value={ctaValue(section.content.cta).href}
+                  onChange={(event) => setContent("cta", { ...ctaValue(section.content.cta), href: event.target.value })}
+                  className="border-white/15 bg-white/8 text-white"
+                />
+              </Field>
+            </div>
           </>
         ) : null}
 
