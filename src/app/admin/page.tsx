@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, ContactRound, FileText, FolderPlus, GalleryHorizontalEnd, Images, ShieldCheck } from "lucide-react";
+import { CalendarDays, ContactRound, FileText, FolderPlus, GalleryHorizontalEnd, Images, ShieldCheck, Users } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getGalleryCollections, getMembers, getPagesForAdmin } from "@/lib/cms-data";
@@ -25,6 +25,12 @@ const workflows = [
     icon: Images,
   },
   {
+    title: "Famous Figures",
+    description: "Open the Famous Figures Drive folder tab and edit image text shown on the website.",
+    href: "/admin/media?folder=famous-figures",
+    icon: Users,
+  },
+  {
     title: "Who We Are",
     description: "Open the Who We Are page editor. Edit text, media, sections, forms, and layout.",
     href: "/admin/who-we-are",
@@ -37,7 +43,7 @@ const workflows = [
     icon: GalleryHorizontalEnd,
   },
   {
-    title: "Create Event",
+    title: "Events",
     description: "Create events with title, date, Drive image, video, invitation link, location, and details.",
     href: "/admin/events",
     icon: CalendarDays,

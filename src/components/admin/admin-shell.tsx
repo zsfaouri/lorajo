@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   CalendarDays,
   Images,
@@ -24,34 +24,73 @@ import {
 
 import { cn } from "@/lib/utils";
 
-const nav = [
-  { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { label: "Create New Page", href: "/admin/pages", icon: FileText },
-  { label: "Image Cloud", href: "/admin/media", icon: FolderPlus },
-  { label: "Hero Gallery", href: "/admin/hero-pics", icon: Images },
-  { label: "Who We Are", href: "/admin/who-we-are", icon: ContactRound },
-  { label: "What We Do", href: "/admin/what-we-do", icon: Library },
-  { label: "Create Event", href: "/admin/events", icon: CalendarDays },
-  { label: "Announcements", href: "/admin/announcements", icon: FileText },
-  { label: "Founding Members", href: "/admin/members", icon: Users },
-  { label: "Admin Control", href: "/admin/control", icon: ShieldCheck },
-  { label: "Page Builder", href: "/admin/site-builder", icon: PanelTop },
-  { label: "Theme", href: "/admin/theme", icon: Palette },
-  { label: "Navigation", href: "/admin/navigation", icon: Navigation },
-  { label: "Footer", href: "/admin/footer", icon: ScrollText },
-  { label: "Projects", href: "/admin/projects", icon: GalleryHorizontalEnd },
-  { label: "Articles", href: "/admin/articles", icon: FileText },
-  { label: "Messages", href: "/admin/messages", icon: Inbox },
-  { label: "Newsletter", href: "/admin/newsletter", icon: Mail },
-  { label: "Volunteers", href: "/admin/volunteers", icon: Users },
+const navGroups = [
+  {
+    title: "Dashboard",
+    items: [{ label: "Overview", href: "/admin", icon: LayoutDashboard }],
+  },
+  {
+    title: "Content",
+    items: [
+      { label: "Create New Page", href: "/admin/pages", icon: FileText },
+      { label: "Who We Are", href: "/admin/who-we-are", icon: ContactRound },
+      { label: "What We Do", href: "/admin/what-we-do", icon: Library },
+      { label: "Events", href: "/admin/events", icon: CalendarDays },
+      { label: "Announcements", href: "/admin/announcements", icon: FileText },
+      { label: "Projects", href: "/admin/projects", icon: GalleryHorizontalEnd },
+      { label: "Page Builder", href: "/admin/site-builder", icon: PanelTop },
+    ],
+  },
+  {
+    title: "Media",
+    items: [
+      { label: "Image Cloud", href: "/admin/media", icon: FolderPlus },
+      { label: "Hero Gallery", href: "/admin/hero-pics", icon: Images },
+      { label: "Famous Figures", href: "/admin/media?folder=famous-figures", icon: Users, folder: "famous-figures" },
+      { label: "Landmarks", href: "/admin/media?folder=landmarks", icon: GalleryHorizontalEnd, folder: "landmarks" },
+      { label: "Historical Pics", href: "/admin/media?folder=historical-photos", icon: Images, folder: "historical-photos" },
+    ],
+  },
+  {
+    title: "People",
+    items: [{ label: "Founding Members", href: "/admin/members", icon: Users }],
+  },
+  {
+    title: "Website Setup",
+    items: [
+      { label: "Navigation", href: "/admin/navigation", icon: Navigation },
+      { label: "Footer", href: "/admin/footer", icon: ScrollText },
+      { label: "Theme", href: "/admin/theme", icon: Palette },
+      { label: "Admin Control", href: "/admin/control", icon: ShieldCheck },
+    ],
+  },
+  {
+    title: "Inbox",
+    items: [
+      { label: "Messages", href: "/admin/messages", icon: Inbox },
+      { label: "Newsletter", href: "/admin/newsletter", icon: Mail },
+      { label: "Volunteers", href: "/admin/volunteers", icon: Users },
+    ],
+  },
 ];
+
+const nav = navGroups.flatMap((group) => group.items);
 
 export function AdminShell({ children, className }: { children: React.ReactNode; className?: string }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeFolder = searchParams.get("folder") ?? "";
+
+  function isActive(item: (typeof nav)[number]) {
+    const hrefPath = item.href.split("?")[0];
+    if ("folder" in item && item.folder) return pathname === "/admin/media" && activeFolder === item.folder;
+    if (hrefPath === "/admin/media") return pathname === "/admin/media" && !activeFolder;
+    return pathname === hrefPath || (hrefPath !== "/admin" && pathname.startsWith(`${hrefPath}/`));
+  }
 
   return (
     <div className="admin-theme min-h-screen bg-[var(--color-soft-white)] text-[var(--color-black)]">
-      <aside className="fixed inset-y-0 left-0 hidden w-72 border-r border-black/10 bg-[var(--color-soft-white)] p-5 lg:block">
+      <aside className="fixed inset-y-0 left-0 hidden w-72 overflow-y-auto border-r border-black/10 bg-[var(--color-soft-white)] p-5 lg:block">
         <Link href="/admin" className="flex items-center gap-3 border-b border-black/10 pb-5">
           <span className="flex h-14 w-14 items-center justify-center rounded-full border border-[var(--color-heritage-green)]/20 bg-white shadow-sm">
             <Image src="/lora/brand/lora-logo.png" alt="LORA logo" width={44} height={44} className="h-11 w-11 rounded-full object-contain" priority />
@@ -61,24 +100,29 @@ export function AdminShell({ children, className }: { children: React.ReactNode;
             <span className="mt-1 block text-xs uppercase tracking-[0.16em] text-black/45">Luweibdeh admin</span>
           </span>
         </Link>
-        <nav className="mt-5 grid gap-1">
-          {nav.map((item) => {
-            const Icon = item.icon;
-            const active = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(`${item.href}/`));
-            return (
-              <Link
-                key={item.href + item.label}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-[var(--color-heritage-green)]/8 hover:text-[var(--color-heritage-green)]",
-                  active ? "admin-active bg-[var(--color-heritage-green)] text-white" : "text-black/62",
-                )}
-              >
-                <Icon size={16} />
-                {item.label}
-              </Link>
-            );
-          })}
+        <nav className="mt-5 grid gap-5 pb-6">
+          {navGroups.map((group) => (
+            <section key={group.title} className="grid gap-1">
+              <p className="px-3 pb-1 text-[10px] uppercase tracking-[0.18em] text-black/36">{group.title}</p>
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item);
+                return (
+                  <Link
+                    key={item.href + item.label}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-[var(--color-heritage-green)]/8 hover:text-[var(--color-heritage-green)]",
+                      active ? "admin-active bg-[var(--color-heritage-green)] text-white" : "text-black/62",
+                    )}
+                  >
+                    <Icon size={16} />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </section>
+          ))}
         </nav>
       </aside>
       <div className="lg:pl-72">
@@ -93,7 +137,7 @@ export function AdminShell({ children, className }: { children: React.ReactNode;
         </header>
         <nav className="sticky top-16 z-20 flex gap-2 overflow-x-auto border-b border-black/10 bg-[var(--color-soft-white)] px-4 py-3 lg:hidden">
           {nav.map((item) => {
-            const active = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(`${item.href}/`));
+            const active = isActive(item);
             return (
               <Link
                 key={`mobile-${item.href}`}

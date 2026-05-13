@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ExternalLink, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -51,13 +52,25 @@ function initialImageText(collections: GalleryCollection[]) {
   );
 }
 
+function collectionIdFromSlug(collections: GalleryCollection[], slug: string | null) {
+  return collections.find((collection) => collection.slug === slug)?.id ?? collections[0]?.id ?? "";
+}
+
 export function GalleryAlbumManager({ initialCollections }: { initialCollections: GalleryCollection[]; mediaAssets?: MediaAsset[] }) {
+  const searchParams = useSearchParams();
+  const requestedFolder = searchParams.get("folder");
   const [collections, setCollections] = useState(initialCollections);
-  const [activeId, setActiveId] = useState(initialCollections[0]?.id ?? "");
+  const [activeId, setActiveId] = useState(() => collectionIdFromSlug(initialCollections, requestedFolder));
   const [status, setStatus] = useState("");
   const [newFolderName, setNewFolderName] = useState("");
   const [imageText, setImageText] = useState<Record<string, { alt: string; caption: string }>>(initialImageText(initialCollections));
   const active = useMemo(() => collections.find((collection) => collection.id === activeId) ?? collections[0], [activeId, collections]);
+
+  useEffect(() => {
+    if (!requestedFolder) return;
+    const requestedId = collectionIdFromSlug(collections, requestedFolder);
+    if (requestedId) setActiveId(requestedId);
+  }, [collections, requestedFolder]);
 
   async function reloadCollections(nextActiveId = active?.id ?? "") {
     const response = await fetch("/api/admin/gallery", { cache: "no-store" });
