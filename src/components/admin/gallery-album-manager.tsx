@@ -299,7 +299,7 @@ export function GalleryAlbumManager({ initialCollections, mediaAssets = [] }: { 
               >
                 <span className="block text-sm font-medium">{collection.title}</span>
                 <span className={cn("mt-1 block text-xs", collection.id === active?.id ? "text-white/70" : "text-black/42")}>
-                  {collection.slug} / {collection.images.length} images
+                  {collection.images.length} photos · Google Drive
                 </span>
               </button>
             ))}

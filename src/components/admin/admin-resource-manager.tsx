@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import type { FormEvent } from "react";
-import { useMemo, useState } from "react";
-import { CheckCircle2, ExternalLink, FilePenLine, Plus, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { CheckCircle2, ExternalLink, FilePenLine, Plus, Trash2, X, XCircle } from "lucide-react";
 
 import { DriveImagePicker, type DriveMediaAsset } from "@/components/admin/drive-image-picker";
 import { Badge } from "@/components/ui/badge";
@@ -205,22 +205,37 @@ export function AdminResourceManager({
   const [items, setItems] = useState<ResourceItem[]>(initialItems);
   const [selectedId, setSelectedId] = useState<string>("new");
   const [status, setStatus] = useState<string>("");
+  const [statusType, setStatusType] = useState<"success" | "error" | "info">("info");
   const [isSaving, setIsSaving] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const selectedItem = items.find((item) => item.id === selectedId) ?? null;
   const mode = selectedItem ? "edit" : "create";
   const selectedDriveFolderId = typeof selectedItem?.driveFolderId === "string" ? selectedItem.driveFolderId : undefined;
 
+  useEffect(() => {
+    if (statusType !== "success" || !status) return;
+    const timeout = window.setTimeout(() => setStatus(""), 3000);
+    return () => window.clearTimeout(timeout);
+  }, [status, statusType]);
+
+  function setStatusMessage(message: string, type: "success" | "error" | "info" = "info") {
+    setStatus(message);
+    setStatusType(type);
+  }
+
   function beginCreate() {
     setSelectedId("new");
     setValues(emptyValues);
-    setStatus("");
+    setStatusMessage("");
+    setPendingDeleteId(null);
   }
 
   function beginEdit(item: ResourceItem) {
     setSelectedId(item.id);
     setValues(valuesFromItem(fields, item));
-    setStatus("");
+    setStatusMessage("");
+    setPendingDeleteId(null);
   }
 
   function setTitleAndMaybeSlug(name: string, value: string) {
@@ -236,7 +251,7 @@ export function AdminResourceManager({
   async function saveItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSaving(true);
-    setStatus(mode === "edit" ? "Saving changes..." : "Creating...");
+    setStatusMessage(mode === "edit" ? "Saving changes..." : "Creating...");
 
     const response = await fetch(mode === "edit" ? `${endpoint}/${selectedItem?.id}` : endpoint, {
       method: mode === "edit" ? "PUT" : "POST",
@@ -248,37 +263,35 @@ export function AdminResourceManager({
     setIsSaving(false);
 
     if (!response.ok) {
-      setStatus(json.error ?? "Save failed");
+      setStatusMessage(json.error ?? "Save failed", "error");
       return;
     }
 
     if (mode === "edit") {
       setItems((current) => current.map((item) => (item.id === json.id ? json : item)));
       setValues(valuesFromItem(fields, json));
-      setStatus("Changes saved.");
+      setStatusMessage("Changes saved.", "success");
       return;
     }
 
     setItems((current) => [json, ...current]);
     setSelectedId(json.id);
     setValues(valuesFromItem(fields, json));
-    setStatus("Created.");
+    setStatusMessage("Created.", "success");
   }
 
   async function deleteItem(item: ResourceItem) {
-    if (!window.confirm(`Delete "${itemTitle(item)}"?`)) return;
-
-    setStatus("Deleting...");
+    setStatusMessage("Deleting...");
     const response = await fetch(`${endpoint}/${item.id}`, { method: "DELETE" });
     const json = await response.json();
     if (!response.ok) {
-      setStatus(json.error ?? "Delete failed");
+      setStatusMessage(json.error ?? "Delete failed", "error");
       return;
     }
 
     setItems((current) => current.filter((currentItem) => currentItem.id !== item.id));
     beginCreate();
-    setStatus("Deleted.");
+    setStatusMessage("Deleted.", "success");
   }
 
   function renderField(field: FieldConfig) {
@@ -362,10 +375,6 @@ export function AdminResourceManager({
           <h1 className="mt-3 text-4xl font-medium text-black">{title}</h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-black/58">{description}</p>
         </div>
-        <Button type="button" variant="green" onClick={beginCreate} className="w-full justify-center md:w-auto">
-          <Plus size={16} />
-          Create new
-        </Button>
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
@@ -401,7 +410,7 @@ export function AdminResourceManager({
 
             {items.length === 0 ? (
               <div className="rounded-[var(--radius-card)] border border-dashed border-black/15 bg-[var(--color-soft-white)] p-5 text-sm leading-6 text-black/55">
-                No records yet. Press Create new, fill the form, then save.
+                No records yet. Press New record, fill the form, then save.
               </div>
             ) : (
               <div className="grid max-h-[62vh] gap-2 overflow-auto pr-1">
@@ -496,13 +505,30 @@ export function AdminResourceManager({
                     Cancel
                   </Button>
                   {mode === "edit" && selectedItem ? (
-                    <Button type="button" variant="outline" onClick={() => void deleteItem(selectedItem)} className="border-red-500/45 text-red-700 hover:bg-red-600 hover:text-white">
-                      <Trash2 size={16} />
-                      Delete
-                    </Button>
+                    pendingDeleteId === selectedItem.id ? (
+                      <>
+                        <Button type="button" variant="outline" onClick={() => void deleteItem(selectedItem)} className="border-red-500 bg-red-50 text-red-700 hover:bg-red-600 hover:text-white">
+                          <Trash2 size={16} />
+                          Confirm delete
+                        </Button>
+                        <Button type="button" variant="outline" onClick={() => setPendingDeleteId(null)}>
+                          Cancel
+                        </Button>
+                      </>
+                    ) : (
+                      <Button type="button" variant="outline" onClick={() => setPendingDeleteId(selectedItem.id)} className="border-red-500/45 text-red-700 hover:bg-red-600 hover:text-white">
+                        <Trash2 size={16} />
+                        Delete
+                      </Button>
+                    )
                   ) : null}
                 </div>
-                {status ? <p className="text-sm text-black/55">{status}</p> : null}
+                {status ? (
+                  <p className={cn("inline-flex items-center gap-2 text-sm font-medium", statusType === "error" ? "text-red-700" : statusType === "success" ? "text-[var(--color-heritage-green)]" : "text-black/60")}>
+                    {statusType === "error" ? <XCircle size={16} /> : statusType === "success" ? <CheckCircle2 size={16} /> : null}
+                    {status}
+                  </p>
+                ) : null}
               </div>
             </form>
           </CardContent>
