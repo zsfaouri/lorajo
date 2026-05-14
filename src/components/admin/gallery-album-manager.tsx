@@ -116,6 +116,10 @@ export function GalleryAlbumManager({ initialCollections, mediaAssets = [] }: { 
       return;
     }
     await reloadCollections();
+    if (json.folders === 0 || json.images === 0) {
+      setStatus("Drive sync returned no images. Make sure GOOGLE_DRIVE_CLIENT_EMAIL and GOOGLE_DRIVE_PRIVATE_KEY are set in your Vercel environment variables, then try again.");
+      return;
+    }
     setStatus(`Synced ${json.folders} folders and ${json.images} images from Google Drive.`);
   }
 
@@ -428,8 +432,18 @@ export function GalleryAlbumManager({ initialCollections, mediaAssets = [] }: { 
               ))}
             </CardContent>
           </Card>
+        ) : collections.length === 0 ? (
+          <Card className="border-dashed border-black/15 bg-white">
+            <CardHeader>
+              <CardTitle>No Drive folders synced yet</CardTitle>
+              <CardDescription>
+                No Drive folders synced yet. Click Sync Google Drive to pull your folders and images from Drive.
+              </CardDescription>
+            </CardHeader>
+          </Card>
         ) : null}
       </main>
     </div>
   );
 }
+
