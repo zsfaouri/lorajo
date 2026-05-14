@@ -13,7 +13,7 @@ type Testimonial = {
   src: string;
 };
 
-const placeholderBase = "https://placehold.co/500x500/e2e8f0/64748b";
+const placeholderBase = "https://placehold.co/500x500/f4f7f0/1f5f3a";
 
 function getInitials(name: string) {
   return name
@@ -68,7 +68,7 @@ const AnimatedTestimonials = ({
   if (!testimonials.length) return null;
 
   const isActive = (index: number) => index === active;
-  const randomRotate = () => `${Math.floor(Math.random() * 16) - 8}deg`;
+  const stableRotate = (index: number) => `${((index * 7) % 16) - 8}deg`;
 
   return (
     <div className="mx-auto max-w-sm px-4 py-20 font-sans antialiased md:max-w-4xl md:px-8 lg:px-12">
@@ -79,13 +79,13 @@ const AnimatedTestimonials = ({
               {testimonials.map((testimonial, index) => (
                 <motion.div
                   key={`${testimonial.src}-${testimonial.name}`}
-                  initial={{ opacity: 0, scale: 0.9, y: 50, rotate: randomRotate() }}
+                  initial={{ opacity: 0, scale: 0.9, y: 50, rotate: stableRotate(index) }}
                   animate={{
                     opacity: isActive(index) ? 1 : 0.5,
                     scale: isActive(index) ? 1 : 0.9,
                     y: isActive(index) ? 0 : 20,
                     zIndex: isActive(index) ? testimonials.length : testimonials.length - Math.abs(index - active),
-                    rotate: isActive(index) ? "0deg" : randomRotate(),
+                    rotate: isActive(index) ? "0deg" : stableRotate(index),
                   }}
                   exit={{ opacity: 0, scale: 0.9, y: -50 }}
                   transition={{ duration: 0.5, ease: "easeInOut" }}
@@ -122,9 +122,9 @@ const AnimatedTestimonials = ({
               className="flex flex-col justify-between"
             >
               <div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-50">{testimonials[active].name}</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400">{testimonials[active].designation}</p>
-                <motion.p className="mt-8 text-lg text-slate-700 dark:text-slate-300">
+                <h3 className="text-2xl font-bold text-[var(--color-black)]">{testimonials[active].name}</h3>
+                <p className="text-sm text-black/58">{testimonials[active].designation}</p>
+                <motion.p className="mt-8 text-lg text-black/70">
                   &quot;{testimonials[active].quote}&quot;
                 </motion.p>
               </div>
@@ -136,17 +136,17 @@ const AnimatedTestimonials = ({
                 type="button"
                 onClick={handlePrev}
                 aria-label="Previous testimonial"
-                className="group flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 transition-colors hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 dark:bg-slate-800 dark:hover:bg-slate-700 dark:focus:ring-slate-500"
+                className="group flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.06] transition-colors hover:bg-black/[0.1] focus:outline-none focus:ring-2 focus:ring-[var(--color-heritage-green)] focus:ring-offset-2"
               >
-                <ArrowLeft className="h-5 w-5 text-slate-800 transition-transform duration-300 group-hover:-translate-x-1 dark:text-slate-300" />
+                <ArrowLeft className="h-5 w-5 text-[var(--color-black)] transition-transform duration-300 group-hover:-translate-x-1" />
               </button>
               <button
                 type="button"
                 onClick={handleNext}
                 aria-label="Next testimonial"
-                className="group flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 transition-colors hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 dark:bg-slate-800 dark:hover:bg-slate-700 dark:focus:ring-slate-500"
+                className="group flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.06] transition-colors hover:bg-black/[0.1] focus:outline-none focus:ring-2 focus:ring-[var(--color-heritage-green)] focus:ring-offset-2"
               >
-                <ArrowRight className="h-5 w-5 text-slate-800 transition-transform duration-300 group-hover:translate-x-1 dark:text-slate-300" />
+                <ArrowRight className="h-5 w-5 text-[var(--color-black)] transition-transform duration-300 group-hover:translate-x-1" />
               </button>
             </div>
           ) : null}
@@ -162,7 +162,7 @@ function AnimatedTestimonialsDemo({ testimonials }: { testimonials: Testimonial[
 
 function Component({ testimonials }: { testimonials: Testimonial[] }) {
   return (
-    <div className="founding-members-experience relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-slate-50 dark:bg-slate-950">
+    <div className="founding-members-experience relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-[var(--color-soft-white)]">
       <style>
         {`
           @keyframes animate-grid {
@@ -173,15 +173,10 @@ function Component({ testimonials }: { testimonials: Testimonial[] }) {
             width: 200%;
             height: 200%;
             background-image:
-              linear-gradient(to right, #e2e8f0 1px, transparent 1px),
-              linear-gradient(to bottom, #e2e8f0 1px, transparent 1px);
+              linear-gradient(to right, rgb(0 0 0 / 0.1) 1px, transparent 1px),
+              linear-gradient(to bottom, rgb(0 0 0 / 0.1) 1px, transparent 1px);
             background-size: 3rem 3rem;
             animation: animate-grid 40s linear infinite alternate;
-          }
-          .dark .animated-grid {
-            background-image:
-              linear-gradient(to right, #1e293b 1px, transparent 1px),
-              linear-gradient(to bottom, #1e293b 1px, transparent 1px);
           }
         `}
       </style>

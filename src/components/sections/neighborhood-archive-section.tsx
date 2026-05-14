@@ -57,9 +57,9 @@ export function NeighborhoodArchiveSection({
         <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
           <div>
             <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-heritage-green)]">LORA archive</p>
-            <h1 className="mt-5 text-[clamp(3.2rem,8vw,7.5rem)] font-[var(--font-heading-weight)] uppercase leading-[0.88]">
+            <h2 className="mt-5 text-[clamp(3.2rem,8vw,7.5rem)] font-[var(--font-heading-weight)] uppercase leading-[0.88]">
               {title}
-            </h1>
+            </h2>
           </div>
           <div className="grid gap-5">
             <p className="max-w-2xl text-lg leading-8 text-black/62">{subtitle}</p>
@@ -76,7 +76,23 @@ export function NeighborhoodArchiveSection({
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
-          <aside className="h-fit rounded-md border border-black/10 bg-white p-4 shadow-sm">
+          <div className="flex gap-2 overflow-x-auto pb-1 lg:hidden">
+            {names.map((name) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => setQuery(name)}
+                className={cn(
+                  "shrink-0 rounded-full border px-3 py-2 text-sm transition-colors",
+                  query === name ? "border-[var(--color-heritage-green)] bg-[var(--color-heritage-green)] text-white" : "border-black/10 bg-white text-black/62",
+                )}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+
+          <aside className="hidden h-fit rounded-md border border-black/10 bg-white p-4 shadow-sm lg:block">
             <div className="flex items-center justify-between border-b border-black/10 pb-3">
               <p className="text-sm font-medium text-black">Names library</p>
               <span className="text-xs text-black/42">{names.length}</span>

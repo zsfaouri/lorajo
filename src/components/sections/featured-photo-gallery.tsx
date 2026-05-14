@@ -103,7 +103,8 @@ export function FeaturedPhotoGallery({
                 "text-blk tab rounded-full border px-5 py-3 text-sm uppercase tracking-[0.14em] transition",
                 activeFilter === filter.value
                   ? "tab-active border-black bg-black text-white"
-                  : "border-black/15 bg-white text-black/55 hover:border-black/35 hover:text-black",
+                  : "border-black/15 bg-white text-black/70 hover:border-black/35 hover:text-black",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-heritage-green)] focus-visible:ring-offset-2",
               )}
             >
               {filter.label}
@@ -128,7 +129,7 @@ export function FeaturedPhotoGallery({
                   index === 1 && "overlay-visible bg-black/42",
                 )}
               />
-              <div className="responsive-container-block desc absolute inset-x-0 bottom-0 translate-y-4 p-5 text-white opacity-0 transition duration-500 group-hover:translate-y-0 group-hover:opacity-100">
+              <div className="responsive-container-block desc absolute inset-x-0 bottom-0 translate-y-0 bg-gradient-to-t from-black/78 via-black/36 to-transparent p-5 text-white opacity-100 transition duration-500 sm:translate-y-4 sm:opacity-0 sm:group-hover:translate-y-0 sm:group-hover:opacity-100">
                 <p className="text-blk title text-xl font-semibold leading-tight">{item.title}</p>
                 <p className="text-blk info mt-2 line-clamp-3 text-sm leading-6 text-white/76">{item.info}</p>
                 <p className="mt-4 text-[11px] uppercase tracking-[0.18em] text-white/54">{item.collectionTitle}</p>

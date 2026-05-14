@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -20,7 +20,14 @@ export function PublicHeader({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const otherLocale = locale === "ar" ? "en" : "ar";
-  const otherPath = pathname.replace(`/${locale}`, `/${otherLocale}`);
+  const otherPath = `/${otherLocale}${pathname.slice(locale.length + 1)}`;
+
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-[var(--color-black)]/82 text-white backdrop-blur-xl">
