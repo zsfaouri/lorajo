@@ -48,7 +48,10 @@ async function getDriveClient() {
 }
 
 export function isGoogleDriveConfigured() {
-  return Boolean(process.env.GOOGLE_DRIVE_CLIENT_EMAIL && process.env.GOOGLE_DRIVE_PRIVATE_KEY);
+  return Boolean(
+    (process.env.GOOGLE_DRIVE_CLIENT_EMAIL && process.env.GOOGLE_DRIVE_PRIVATE_KEY) ||
+    process.env.GOOGLE_API_KEY,
+  );
 }
 
 export function googleDriveImageUrl(fileId: string) {
@@ -162,9 +165,53 @@ async function listPublicGoogleDriveFolder(folderId: string, refreshKey = ""): P
   return [...new Map(parsed.map((item) => [item.id, item])).values()];
 }
 
+async function listGoogleDriveApiKeyFolder(folderId: string): Promise<DriveBrowserItem[]> {
+  const apiKey = process.env.GOOGLE_API_KEY;
+  if (!apiKey) return [];
+
+  const url = new URL("https://www.googleapis.com/drive/v3/files");
+  url.searchParams.set("q", `'${folderId}' in parents and trashed = false`);
+  url.searchParams.set("fields", "files(id,name,mimeType,webViewLink,thumbnailLink)");
+  url.searchParams.set("orderBy", "folder,name");
+  url.searchParams.set("pageSize", "1000");
+  url.searchParams.set("key", apiKey);
+
+  const response = await fetch(url.toString(), { cache: "no-store" });
+  if (!response.ok) return [];
+
+  const data = (await response.json()) as { files?: Array<Record<string, string>> };
+  return (data.files ?? []).flatMap((file) => {
+    const id = file.id;
+    const name = file.name ?? "Untitled";
+    const mimeType = file.mimeType ?? "";
+    if (!id) return [];
+
+    const isFolder = mimeType === "application/vnd.google-apps.folder";
+    const isImage = mimeType.startsWith("image/");
+    const isVideo = mimeType.startsWith("video/");
+    if (!isFolder && !isImage && !isVideo) return [];
+
+    return [
+      {
+        id,
+        name,
+        mimeType,
+        type: isFolder ? "folder" : isVideo ? "video" : "image",
+        url: isVideo
+          ? googleDriveVideoUrl(id)
+          : file.webViewLink ?? (isFolder ? `https://drive.google.com/drive/folders/${id}` : `https://drive.google.com/file/d/${id}/view`),
+        thumbnailUrl: isFolder ? null : googleDriveImageUrl(id),
+      } satisfies DriveBrowserItem,
+    ];
+  });
+}
+
 export async function listGoogleDriveFolder(folderId = getRootFolderId(), refreshKey = ""): Promise<DriveBrowserItem[]> {
   const apiItems = await listGoogleDriveApiFolder(folderId).catch(() => []);
   if (apiItems.length > 0) return apiItems;
+
+  const apiKeyItems = await listGoogleDriveApiKeyFolder(folderId).catch(() => []);
+  if (apiKeyItems.length > 0) return apiKeyItems;
 
   const publicItems = await listPublicGoogleDriveFolder(folderId, refreshKey).catch(() => []);
   if (publicItems.length > 0) return publicItems;

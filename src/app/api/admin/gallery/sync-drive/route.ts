@@ -10,10 +10,15 @@ export async function POST(request: Request) {
   const prisma = requirePrisma();
   if (!prisma) return error("Database is not configured", 503);
 
-  const body = await request.json().catch(() => null);
-  const folderId = typeof body?.folderId === "string" ? body.folderId.trim() : "";
-  if (folderId) return ok(await syncSingleFolderToDatabase(prisma, folderId));
-
-  const result = await syncDriveGalleryToDatabase(prisma);
-  return ok(result);
+  try {
+    const body = await request.json().catch(() => null);
+    const folderId = typeof body?.folderId === "string" ? body.folderId.trim() : "";
+    if (folderId) return ok(await syncSingleFolderToDatabase(prisma, folderId));
+    const result = await syncDriveGalleryToDatabase(prisma);
+    return ok(result);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[sync-drive] error:", message);
+    return error(`Sync failed: ${message}`, 500);
+  }
 }

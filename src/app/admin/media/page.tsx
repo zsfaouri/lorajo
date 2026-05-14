@@ -26,7 +26,9 @@ export default async function MediaLibraryPage() {
 
   let collections = await loadCollections();
   if (prisma && collections.length === 0) {
-    await syncDriveGalleryToDatabase(prisma).catch(() => null);
+    await syncDriveGalleryToDatabase(prisma).catch((err: unknown) => {
+      console.error("[admin/media] bootstrap sync failed:", err);
+    });
     collections = await loadCollections();
   }
 

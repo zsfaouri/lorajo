@@ -117,7 +117,7 @@ export function GalleryAlbumManager({ initialCollections, mediaAssets = [] }: { 
     }
     await reloadCollections();
     if (json.folders === 0 || json.images === 0) {
-      setStatus("Drive sync returned no images. Make sure GOOGLE_DRIVE_CLIENT_EMAIL and GOOGLE_DRIVE_PRIVATE_KEY are set in your Vercel environment variables, then try again.");
+      setStatus("Drive sync returned no images. Make sure the Google Drive folders are shared publicly, then try again.");
       return;
     }
     setStatus(`Synced ${json.folders} folders and ${json.images} images from Google Drive.`);

@@ -37,12 +37,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const valid = await bcrypt.compare(parsed.data.password, user.passwordHash);
         if (!valid) return null;
 
+        const isEnvAdmin = user.email === process.env.ADMIN_EMAIL;
         return {
           id: user.id,
           name: user.name,
           email: user.email,
           image: user.image,
-          role: user.role?.name ?? null,
+          role: user.role?.name ?? (isEnvAdmin ? "admin" : null),
         };
       },
     }),
