@@ -20,7 +20,7 @@ type GalleryItem = {
 
 const filters: Array<{ label: string; value: GalleryFilter }> = [
   { label: "All", value: "all" },
-  { label: "Historical", value: "historical-photos" },
+  { label: "Historical Pics", value: "historical-photos" },
   { label: "Landmarks", value: "landmarks" },
   { label: "Famous Figures", value: "famous-figures" },
 ];
@@ -86,9 +86,9 @@ export function FeaturedPhotoGallery({
       <div className="container-block bg mx-auto max-w-7xl">
         <div className="mx-auto max-w-3xl text-center">
           <p className="mb-4 text-xs uppercase tracking-[0.22em] text-[var(--color-heritage-green)]">LORA Archive</p>
-          <h1 className="text-[clamp(3rem,7vw,6rem)] font-[var(--font-heading-weight)] uppercase leading-[0.92] text-black">
+          <h2 className="text-[clamp(3rem,7vw,6rem)] font-[var(--font-heading-weight)] uppercase leading-[0.92] text-black">
             {title}
-          </h1>
+          </h2>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-black/58">{subtitle}</p>
         </div>
 

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -67,6 +68,7 @@ export function DriveImagePicker({
   emptyMessage?: string;
   compact?: boolean;
 }) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState(() => {
     if (Array.isArray(category)) return category[0] ?? "all";
@@ -106,8 +108,8 @@ export function DriveImagePicker({
     setStatus("Reading Google Drive...");
     try {
       const result = await syncGoogleDrive();
-      setStatus(`Synced ${result.folders ?? 0} folders / ${result.images ?? 0} images. Reloading...`);
-      window.location.reload();
+      setStatus(`Synced ${result.folders ?? 0} folders / ${result.images ?? 0} images.`);
+      router.refresh();
     } catch (caught) {
       setStatus(caught instanceof Error ? caught.message : "Drive sync failed.");
     }

@@ -75,6 +75,7 @@ export function GalleryAlbumManager({ initialCollections, mediaAssets = [] }: { 
   const [activeId, setActiveId] = useState(() => collectionIdFromSlug(initialCollections, requestedFolder));
   const [status, setStatus] = useState("");
   const [newFolderName, setNewFolderName] = useState("");
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newProfile, setNewProfile] = useState<NewProfileForm>(emptyNewProfile);
   const [imageText, setImageText] = useState<Record<string, { alt: string; caption: string }>>(initialImageText(initialCollections));
   const active = useMemo(() => collections.find((collection) => collection.id === activeId) ?? collections[0], [activeId, collections]);
@@ -118,27 +119,33 @@ export function GalleryAlbumManager({ initialCollections, mediaAssets = [] }: { 
   }
 
   async function createDriveFolder() {
+    if (isCreatingFolder) return;
     const name = newFolderName.trim();
     if (!name) {
       setStatus("Folder name is required.");
       return;
     }
 
-    setStatus("Creating Google Drive folder...");
-    const response = await fetch("/api/admin/drive", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
-    });
-    const json = await response.json();
-    if (!response.ok) {
-      setStatus(json.error ?? "Could not create Drive folder.");
-      return;
-    }
+    setIsCreatingFolder(true);
+    try {
+      setStatus("Creating Google Drive folder...");
+      const response = await fetch("/api/admin/drive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const json = await response.json();
+      if (!response.ok) {
+        setStatus(json.error ?? "Could not create Drive folder.");
+        return;
+      }
 
-    setNewFolderName("");
-    await syncDrive();
-    setStatus(`Created Drive folder: ${json.name ?? name}`);
+      setNewFolderName("");
+      await syncDrive();
+      setStatus(`Created Drive folder: ${json.name ?? name}`);
+    } finally {
+      setIsCreatingFolder(false);
+    }
   }
 
   async function saveImageText(imageId: string) {
@@ -265,8 +272,8 @@ export function GalleryAlbumManager({ initialCollections, mediaAssets = [] }: { 
           </CardHeader>
           <CardContent className="grid gap-3">
             <Input value={newFolderName} onChange={(event) => setNewFolderName(event.target.value)} placeholder="Folder name" />
-            <Button type="button" variant="green" onClick={createDriveFolder}>
-              Add Drive folder
+            <Button type="button" variant="green" onClick={createDriveFolder} disabled={isCreatingFolder}>
+              {isCreatingFolder ? "Adding..." : "Add Drive folder"}
             </Button>
           </CardContent>
         </Card>
