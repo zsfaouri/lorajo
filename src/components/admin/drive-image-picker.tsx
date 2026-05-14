@@ -6,6 +6,7 @@ import { RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { canonicalGallerySlug } from "@/lib/gallery-slugs";
 import { cn } from "@/lib/utils";
 
 export type DriveMediaAsset = {
@@ -24,26 +25,8 @@ function metadataValue(asset: DriveMediaAsset, key: string) {
   return typeof value === "string" ? value : "";
 }
 
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/&/g, " and ")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-function canonicalCategory(value: string) {
-  const slug = slugify(value);
-  if (["famous", "famous-figures", "famous-figuers"].includes(slug)) return "famous-figures";
-  if (["founders", "founding-members"].includes(slug)) return "founding-members";
-  if (["hero", "hero-pics", "hero-pictures"].includes(slug)) return "hero-pics";
-  if (["historical-pics", "historical-photos", "history"].includes(slug)) return "historical-photos";
-  if (["archive", "neighborhood", "neighborhood-archive", "names-library", "name-library"].includes(slug)) return "neighborhood-archive";
-  return slug;
-}
-
 export function driveAssetCategorySlug(asset: DriveMediaAsset) {
-  return canonicalCategory(metadataValue(asset, "driveFolderName") || metadataValue(asset, "category"));
+  return canonicalGallerySlug(metadataValue(asset, "driveFolderName") || metadataValue(asset, "category"));
 }
 
 export function driveAssetCategoryLabel(asset: DriveMediaAsset) {
@@ -104,12 +87,12 @@ export function DriveImagePicker({
 
   const allowedCategories = useMemo(() => {
     if (!category) return null;
-    return new Set((Array.isArray(category) ? category : [category]).map(canonicalCategory));
+    return new Set((Array.isArray(category) ? category : [category]).map(canonicalGallerySlug));
   }, [category]);
 
   const filteredAssets = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    const normalizedActive = canonicalCategory(activeCategory);
+    const normalizedActive = canonicalGallerySlug(activeCategory);
     return driveAssets.filter((asset) => {
       const assetCategory = driveAssetCategorySlug(asset);
       if (allowedCategories && !allowedCategories.has(assetCategory)) return false;

@@ -1,20 +1,13 @@
 import { Locale, MediaType, PublishState, type PrismaClient } from "@prisma/client";
 
+import { canonicalGallerySlug } from "@/lib/gallery-slugs";
 import { listGoogleDriveFolder } from "@/lib/google-drive";
 import type { GalleryCollectionDto, NeighborhoodArchiveItem } from "@/types/cms";
 
 const publicGallerySlugs = new Set(["famous-figures", "historical-photos", "landmarks"]);
 
-function slugifyDriveName(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/&/g, " and ")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
 export function driveCollectionTitle(name: string) {
-  const slug = canonicalDriveSlug(name);
+  const slug = canonicalGallerySlug(name);
   if (slug === "famous-figures") return "Famous Figures";
   if (slug === "historical-photos") return "Historical Pics";
   if (slug === "landmarks") return "Landmarks";
@@ -36,16 +29,6 @@ export function driveCaption(fileName: string) {
     .trim();
 }
 
-export function canonicalDriveSlug(name: string) {
-  const slug = slugifyDriveName(name);
-  if (["famous", "famous-figures", "famous-figuers"].includes(slug)) return "famous-figures";
-  if (["historical-pics", "historical-photos", "history"].includes(slug)) return "historical-photos";
-  if (["founders", "founding-members"].includes(slug)) return "founding-members";
-  if (["hero", "hero-pics", "hero-pictures"].includes(slug)) return "hero-pics";
-  if (["archive", "neighborhood", "neighborhood-archive", "names-library", "name-library"].includes(slug)) return "neighborhood-archive";
-  return slug || "drive-folder";
-}
-
 export async function getDriveGalleryCollections(): Promise<GalleryCollectionDto[]> {
   const rootItems = await listGoogleDriveFolder();
   const folders = rootItems.filter((item) => item.type === "folder");
@@ -65,7 +48,7 @@ export async function getDriveGalleryCollections(): Promise<GalleryCollectionDto
       return {
         id: `drive-${folder.id}`,
         title: driveCollectionTitle(folder.name),
-        slug: canonicalDriveSlug(folder.name),
+        slug: canonicalGallerySlug(folder.name) || "drive-folder",
         description: `Google Drive folder: ${folder.name}`,
         sortOrder: index + 1,
         images,
@@ -78,7 +61,7 @@ export async function getDriveGalleryCollections(): Promise<GalleryCollectionDto
 
 export async function getDriveNeighborhoodArchiveItems(): Promise<NeighborhoodArchiveItem[]> {
   const rootItems = await listGoogleDriveFolder();
-  const folder = rootItems.find((item) => item.type === "folder" && canonicalDriveSlug(item.name) === "neighborhood-archive");
+  const folder = rootItems.find((item) => item.type === "folder" && canonicalGallerySlug(item.name) === "neighborhood-archive");
   if (!folder) return [];
 
   const items = await listGoogleDriveFolder(folder.id);
@@ -108,116 +91,118 @@ export async function syncDriveGalleryToDatabase(prisma: PrismaClient) {
     })),
   );
 
-  const collections = await Promise.all(
-    folderImages.map(async ({ folder }, folderIndex) => {
-      const slug = canonicalDriveSlug(folder.name);
-      const title = driveCollectionTitle(folder.name);
-      const collection = await prisma.galleryCollection.upsert({
-        where: { locale_slug: { locale: Locale.EN, slug } },
-        update: {
-          title,
-          description: `Google Drive folder: ${folder.name}`,
-          sortOrder: folderIndex + 1,
-          status: PublishState.PUBLISHED,
-        },
-        create: {
-          locale: Locale.EN,
-          slug,
-          title,
-          description: `Google Drive folder: ${folder.name}`,
-          sortOrder: folderIndex + 1,
-          status: PublishState.PUBLISHED,
-        },
-      });
-      return { collection, folder, images: folderImages[folderIndex].images };
-    }),
-  );
-
-  const allDriveImages = collections.flatMap(({ folder, images }) => images.map((image) => ({ folder, image })));
-  const allDriveFileIds = [...new Set(allDriveImages.map(({ image }) => image.id))];
-  const existingAssets = await prisma.mediaAsset.findMany({
-    where: { publicId: { in: allDriveFileIds } },
-    select: { id: true, publicId: true },
-  });
-  const existingAssetIds = new Set(existingAssets.map((asset) => asset.publicId).filter(Boolean));
-  const assetsToCreate = allDriveImages
-    .filter(({ image }) => !existingAssetIds.has(image.id))
-    .map(({ folder, image }) => {
-      const caption = driveCaption(image.name);
-      return {
-        key: `google-drive-${image.id.replace(/[^a-z0-9-]/gi, "-").toLowerCase()}`,
-        type: image.type === "video" ? MediaType.VIDEO : MediaType.IMAGE,
-        url: image.type === "video" ? (image.url ?? "") : (image.thumbnailUrl ?? ""),
-        secureUrl: image.type === "video" ? image.url : image.thumbnailUrl,
-        publicId: image.id,
-        alt: caption || image.name,
-        caption: caption || image.name,
-        source: "google drive",
-        metadata: { driveFolderId: folder.id, driveFolderName: folder.name, originalName: image.name, thumbnailUrl: image.thumbnailUrl },
-      };
-    });
-
-  if (assetsToCreate.length > 0) {
-    await prisma.mediaAsset.createMany({
-      data: assetsToCreate,
-      skipDuplicates: true,
-    });
-  }
-
-  const assets = await prisma.mediaAsset.findMany({
-    where: { publicId: { in: allDriveFileIds } },
-    select: { id: true, publicId: true },
-  });
-  const assetByPublicId = new Map(assets.map((asset) => [asset.publicId, asset.id]));
-
-  await Promise.all(
-    collections.map(({ collection, images }) =>
-      prisma.galleryImage.deleteMany({
-        where: {
-          collectionId: collection.id,
-          mediaAsset: {
-            publicId: {
-              notIn: images.map((image) => image.id),
-            },
+  return prisma.$transaction(async (tx) => {
+    const collections = await Promise.all(
+      folderImages.map(async ({ folder }, folderIndex) => {
+        const slug = canonicalGallerySlug(folder.name) || "drive-folder";
+        const title = driveCollectionTitle(folder.name);
+        const collection = await tx.galleryCollection.upsert({
+          where: { locale_slug: { locale: Locale.EN, slug } },
+          update: {
+            title,
+            description: `Google Drive folder: ${folder.name}`,
+            sortOrder: folderIndex + 1,
+            status: PublishState.PUBLISHED,
           },
-        },
+          create: {
+            locale: Locale.EN,
+            slug,
+            title,
+            description: `Google Drive folder: ${folder.name}`,
+            sortOrder: folderIndex + 1,
+            status: PublishState.PUBLISHED,
+          },
+        });
+        return { collection, folder, images: folderImages[folderIndex].images };
       }),
-    ),
-  );
+    );
 
-  const existingGalleryImages = await prisma.galleryImage.findMany({
-    where: {
-      collectionId: { in: collections.map(({ collection }) => collection.id) },
-      mediaAssetId: { in: assets.map((asset) => asset.id) },
-    },
-    select: { collectionId: true, mediaAssetId: true },
-  });
-  const existingGalleryKeys = new Set(existingGalleryImages.map((image) => `${image.collectionId}:${image.mediaAssetId}`));
-
-  const galleryImagesToCreate = collections.flatMap(({ collection, folder, images }) =>
-    images.flatMap((image, imageIndex) => {
-      const mediaAssetId = assetByPublicId.get(image.id);
-      if (!mediaAssetId || existingGalleryKeys.has(`${collection.id}:${mediaAssetId}`)) return [];
-      const caption = driveCaption(image.name);
-      return [
-        {
-          collectionId: collection.id,
-          mediaAssetId,
+    const allDriveImages = collections.flatMap(({ folder, images }) => images.map((image) => ({ folder, image })));
+    const allDriveFileIds = [...new Set(allDriveImages.map(({ image }) => image.id))];
+    const existingAssets = await tx.mediaAsset.findMany({
+      where: { publicId: { in: allDriveFileIds } },
+      select: { id: true, publicId: true },
+    });
+    const existingAssetIds = new Set(existingAssets.map((asset) => asset.publicId).filter(Boolean));
+    const assetsToCreate = allDriveImages
+      .filter(({ image }) => !existingAssetIds.has(image.id))
+      .map(({ folder, image }) => {
+        const caption = driveCaption(image.name);
+        return {
+          key: `google-drive-${image.id.replace(/[^a-z0-9-]/gi, "-").toLowerCase()}`,
+          type: image.type === "video" ? MediaType.VIDEO : MediaType.IMAGE,
+          url: image.type === "video" ? (image.url ?? "") : (image.thumbnailUrl ?? ""),
+          secureUrl: image.type === "video" ? image.url : image.thumbnailUrl,
+          publicId: image.id,
           alt: caption || image.name,
           caption: caption || image.name,
-          sortOrder: imageIndex + 1,
-          metadata: { driveFileId: image.id, driveFolderId: folder.id },
-        },
-      ];
-    }),
-  );
+          source: "google drive",
+          metadata: { driveFolderId: folder.id, driveFolderName: folder.name, originalName: image.name, thumbnailUrl: image.thumbnailUrl },
+        };
+      });
 
-  if (galleryImagesToCreate.length > 0) {
-    await prisma.galleryImage.createMany({ data: galleryImagesToCreate });
-  }
+    if (assetsToCreate.length > 0) {
+      await tx.mediaAsset.createMany({
+        data: assetsToCreate,
+        skipDuplicates: true,
+      });
+    }
 
-  return {
-    folders: folders.length,
-    images: collections.reduce((total, collection) => total + collection.images.length, 0),
-  };
+    const assets = await tx.mediaAsset.findMany({
+      where: { publicId: { in: allDriveFileIds } },
+      select: { id: true, publicId: true },
+    });
+    const assetByPublicId = new Map(assets.map((asset) => [asset.publicId, asset.id]));
+
+    await Promise.all(
+      collections.map(({ collection, images }) =>
+        tx.galleryImage.deleteMany({
+          where: {
+            collectionId: collection.id,
+            mediaAsset: {
+              publicId: {
+                notIn: images.map((image) => image.id),
+              },
+            },
+          },
+        }),
+      ),
+    );
+
+    const existingGalleryImages = await tx.galleryImage.findMany({
+      where: {
+        collectionId: { in: collections.map(({ collection }) => collection.id) },
+        mediaAssetId: { in: assets.map((asset) => asset.id) },
+      },
+      select: { collectionId: true, mediaAssetId: true },
+    });
+    const existingGalleryKeys = new Set(existingGalleryImages.map((image) => `${image.collectionId}:${image.mediaAssetId}`));
+
+    const galleryImagesToCreate = collections.flatMap(({ collection, folder, images }) =>
+      images.flatMap((image, imageIndex) => {
+        const mediaAssetId = assetByPublicId.get(image.id);
+        if (!mediaAssetId || existingGalleryKeys.has(`${collection.id}:${mediaAssetId}`)) return [];
+        const caption = driveCaption(image.name);
+        return [
+          {
+            collectionId: collection.id,
+            mediaAssetId,
+            alt: caption || image.name,
+            caption: caption || image.name,
+            sortOrder: imageIndex + 1,
+            metadata: { driveFileId: image.id, driveFolderId: folder.id },
+          },
+        ];
+      }),
+    );
+
+    if (galleryImagesToCreate.length > 0) {
+      await tx.galleryImage.createMany({ data: galleryImagesToCreate });
+    }
+
+    return {
+      folders: folders.length,
+      images: collections.reduce((total, collection) => total + collection.images.length, 0),
+    };
+  }, { timeout: 60000 });
 }

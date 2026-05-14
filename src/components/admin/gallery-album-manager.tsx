@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { canonicalGallerySlug } from "@/lib/gallery-slugs";
 import { cn } from "@/lib/utils";
 
 const DRIVE_ROOT_URL = "https://drive.google.com/drive/folders/1JPsc0Lp5TbxU6AoO093NVgyJYaYVmK6v";
@@ -59,25 +60,9 @@ function initialImageText(collections: GalleryCollection[]) {
   );
 }
 
-function canonicalMediaSlug(value: string | null) {
-  const slug = (value ?? "")
-    .toLowerCase()
-    .replace(/&/g, " and ")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
-  if (["famous", "famous-figures", "famous-figuers"].includes(slug)) return "famous-figures";
-  if (["landmark", "landmarks"].includes(slug)) return "landmarks";
-  if (["historical-pic", "historical-pics", "historical-photo", "historical-photos", "historcal-pic", "historcal-pics"].includes(slug)) {
-    return "historical-photos";
-  }
-  if (["archive", "neighborhood", "neighborhood-archive", "names-library", "name-library"].includes(slug)) return "neighborhood-archive";
-  return slug;
-}
-
 function collectionIdFromSlug(collections: GalleryCollection[], slug: string | null) {
-  const requestedSlug = canonicalMediaSlug(slug);
-  return collections.find((collection) => canonicalMediaSlug(collection.slug) === requestedSlug)?.id ?? collections[0]?.id ?? "";
+  const requestedSlug = canonicalGallerySlug(slug ?? "");
+  return collections.find((collection) => canonicalGallerySlug(collection.slug) === requestedSlug)?.id ?? collections[0]?.id ?? "";
 }
 
 const emptyNewProfile: NewProfileForm = { asset: null, alt: "", caption: "" };
