@@ -5,6 +5,7 @@ import type {
   GalleryCollectionDto,
   LocaleCode,
   MemberDto,
+  NeighborhoodArchiveItem,
   NavigationItemDto,
   ThemeTokens,
 } from "@/types/cms";
@@ -17,6 +18,7 @@ export const fallbackNavigation: Record<LocaleCode, NavigationItemDto[]> = {
     { id: "nav-en-what", label: "WHAT WE DO", path: "/en/what-we-do", sortOrder: 2, isVisible: true },
     { id: "nav-en-members", label: "FOUNDING MEMBERS", path: "/en/founding-members", sortOrder: 3, isVisible: true },
     { id: "nav-en-gallery", label: "PHOTO GALLERY", path: "/en/photo-gallery", sortOrder: 4, isVisible: true },
+    { id: "nav-en-neighborhood-archive", label: "NEIGHBORHOOD ARCHIVE", path: "/en/neighborhood-archive", sortOrder: 5, isVisible: true },
   ],
   ar: [
     { id: "nav-ar-who", label: "من نحن", path: "/ar/who-we-are", sortOrder: 1, isVisible: true },
@@ -161,6 +163,36 @@ export const fallbackGallery: GalleryCollectionDto[] = [
       { src: "/lora/founders/reem-farkouh.jpg", alt: "Reem Farkouh", caption: "Reem Farkouh" },
       { src: "/lora/founders/saleem-quna.jpg", alt: "Saleem Quna", caption: "Saleem Quna" },
     ],
+  },
+];
+
+export const fallbackNeighborhoodArchive: NeighborhoodArchiveItem[] = [
+  {
+    id: "archive-paris-square",
+    name: "Paris Square",
+    text: "A civic meeting point in Jabal Al-Luweibdeh.",
+    mediaType: "IMAGE",
+    src: "/lora/gallery/square-de-paris.jpg",
+    thumbnail: "/lora/gallery/square-de-paris.jpg",
+    folder: "Fallback archive",
+  },
+  {
+    id: "archive-dar-al-anda",
+    name: "Dar Al-Anda",
+    text: "A cultural landmark in the neighborhood archive.",
+    mediaType: "IMAGE",
+    src: "/lora/gallery/dar-al-anda-art-gallery.jpg",
+    thumbnail: "/lora/gallery/dar-al-anda-art-gallery.jpg",
+    folder: "Fallback archive",
+  },
+  {
+    id: "archive-blue-house",
+    name: "Blue House",
+    text: "Architectural memory from Luweibdeh.",
+    mediaType: "IMAGE",
+    src: "/lora/gallery/blue-house-4.jpg",
+    thumbnail: "/lora/gallery/blue-house-4.jpg",
+    folder: "Fallback archive",
   },
 ];
 
@@ -428,6 +460,30 @@ export const fallbackPages: Record<LocaleCode, Record<string, CmsPage>> = {
         },
       ],
     },
+    "neighborhood-archive": {
+      id: "page-en-neighborhood-archive",
+      locale: "en",
+      slug: "neighborhood-archive",
+      title: "Neighborhood Archive",
+      seoTitle: "Neighborhood Archive - LORA",
+      seoDescription: "A searchable library of neighborhood names, photos, videos, and memory fragments from Jabal Al-Luweibdeh.",
+      status: "PUBLISHED",
+      sections: [
+        {
+          id: "neighborhood-archive-main",
+          type: "neighborhood_archive",
+          variant: "searchable_library",
+          sortOrder: 1,
+          isVisible: true,
+          content: {
+            title: "Neighborhood Archive",
+            subtitle: "Search names, photographs, videos, and memory fragments connected to Jabal Al-Luweibdeh.",
+          },
+          settings: {},
+          background: { token: "softWhite" },
+        },
+      ],
+    },
   },
   ar: {
     home: {
@@ -574,6 +630,30 @@ export const fallbackPages: Record<LocaleCode, Record<string, CmsPage>> = {
             collections: ["HISTORICAL PHOTOS", "LANDMARKS", "FAMOUS FIGURES"],
           },
           settings: {},
+        },
+      ],
+    },
+    "neighborhood-archive": {
+      id: "page-ar-neighborhood-archive",
+      locale: "ar",
+      slug: "neighborhood-archive",
+      title: "Neighborhood Archive",
+      seoTitle: "Neighborhood Archive - LORA",
+      seoDescription: "A searchable library of neighborhood names, photos, videos, and memory fragments from Jabal Al-Luweibdeh.",
+      status: "PUBLISHED",
+      sections: [
+        {
+          id: "neighborhood-archive-ar-main",
+          type: "neighborhood_archive",
+          variant: "searchable_library",
+          sortOrder: 1,
+          isVisible: true,
+          content: {
+            title: "Neighborhood Archive",
+            subtitle: "Search names, photographs, videos, and memory fragments connected to Jabal Al-Luweibdeh.",
+          },
+          settings: {},
+          background: { token: "softWhite" },
         },
       ],
     },

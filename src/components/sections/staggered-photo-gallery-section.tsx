@@ -1,19 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import type { HTMLAttributes } from "react";
-import { useState } from "react";
-import { type HTMLMotionProps, type Variants, motion } from "framer-motion";
+import { X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AnimatePresence, type HTMLMotionProps, type PanInfo, type Variants, motion } from "framer-motion";
 
-import { FramerGalleryCarousel } from "@/components/sections/framer-gallery-carousel";
+import { ProfileCardGallery } from "@/components/sections/profile-card-gallery";
 import { SectionFrame } from "@/components/sections/section-frame";
-import { ResponsiveSphereImageGrid } from "@/components/sections/sphere-image-grid";
 import { cn } from "@/lib/utils";
 import type { CmsImage, CmsSection, GalleryCollectionDto } from "@/types/cms";
-
-interface GalleryGridCellProps extends HTMLMotionProps<"div"> {
-  index: number;
-}
 
 const springTransitionConfig = {
   type: "spring",
@@ -34,20 +29,16 @@ const filterVariants: Variants = {
   },
 };
 
-const areaClasses = [
-  "col-start-2 col-end-3 row-start-1 row-end-3",
-  "col-start-1 col-end-2 row-start-2 row-end-4",
-  "col-start-1 col-end-2 row-start-4 row-end-6",
-  "col-start-2 col-end-3 row-start-3 row-end-5",
+const bentoSpans = [
+  "sm:col-span-2 sm:row-span-4",
+  "sm:col-span-1 sm:row-span-3",
+  "sm:col-span-1 sm:row-span-5",
+  "sm:col-span-2 sm:row-span-3",
+  "sm:col-span-1 sm:row-span-4",
+  "sm:col-span-2 sm:row-span-5",
+  "sm:col-span-1 sm:row-span-3",
+  "sm:col-span-1 sm:row-span-4",
 ];
-
-function chunkImages(images: CmsImage[], size: number) {
-  const chunks: CmsImage[][] = [];
-  for (let index = 0; index < images.length; index += size) {
-    chunks.push(images.slice(index, index + size));
-  }
-  return chunks;
-}
 
 function ContainerStagger({ transition, ...props }: HTMLMotionProps<"div">) {
   return (
@@ -80,36 +71,256 @@ function ContainerAnimated({ transition, ...props }: HTMLMotionProps<"div">) {
   );
 }
 
-function GalleryGrid({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div className={cn("grid grid-cols-2 grid-rows-[50px_150px_50px_150px_50px] gap-4", className)} {...props} />
-  );
-}
+function GalleryImage({ src, alt, className, priority = false }: { src: string; alt: string; className?: string; priority?: boolean }) {
+  if (src.includes("supabase.co/storage/")) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt={alt} className={cn("h-full w-full object-cover", className)} loading="lazy" decoding="async" />;
+  }
 
-function GalleryGridCell({ className, transition, index, ...props }: GalleryGridCellProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      whileInView={{ opacity: 1 }}
-      viewport={{ once: true }}
-      transition={{
-        duration: 0.3,
-        delay: index * 0.2,
-        delayChildren: transition?.delayChildren ?? 0.2,
-      }}
-      className={cn("relative overflow-hidden rounded-xl shadow-xl", areaClasses[index], className)}
-      {...props}
+    <Image
+      src={src}
+      alt={alt}
+      fill
+      className={cn("object-cover", className)}
+      sizes="(min-width: 1024px) 720px, (min-width: 640px) 50vw, 100vw"
+      priority={priority}
     />
   );
 }
 
-function GalleryImage({ src, alt }: { src: string; alt: string }) {
-  if (src.includes("supabase.co/storage/")) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={src} alt={alt} className="absolute inset-0 h-full w-full object-cover" />;
+function captionFor(image: CmsImage) {
+  return image.caption ?? image.alt;
+}
+
+export function InteractiveBentoGallery({ images, title }: { images: CmsImage[]; title: string }) {
+  const [items, setItems] = useState(images);
+  const [selectedItem, setSelectedItem] = useState<CmsImage | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dockPosition, setDockPosition] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    setItems(images);
+    setSelectedItem(null);
+    setDockPosition({ x: 0, y: 0 });
+  }, [images]);
+
+  function reorderItem(index: number, info: PanInfo) {
+    setIsDragging(false);
+
+    const moveDistance = info.offset.x + info.offset.y;
+    if (Math.abs(moveDistance) <= 50) return;
+
+    setItems((currentItems) => {
+      const nextItems = [...currentItems];
+      const draggedItem = nextItems[index];
+      const targetIndex = moveDistance > 0 ? Math.min(index + 1, currentItems.length - 1) : Math.max(index - 1, 0);
+
+      nextItems.splice(index, 1);
+      nextItems.splice(targetIndex, 0, draggedItem);
+
+      return nextItems;
+    });
   }
 
-  return <Image src={src} alt={alt} fill className="object-cover" sizes="(min-width: 1024px) 280px, 50vw" />;
+  if (!items.length) {
+    return (
+      <div className="rounded-md border border-dashed border-black/15 bg-white/50 p-8 text-sm text-black/50">
+        No gallery images available.
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-5xl">
+      <ContainerAnimated className="mb-8 text-center">
+        <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-heritage-green)]">{title}</p>
+      </ContainerAnimated>
+
+      <AnimatePresence mode="wait">
+        {selectedItem ? (
+          <>
+            <motion.div
+              initial={{ scale: 0.98, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.98, opacity: 0 }}
+              transition={{
+                type: "spring",
+                stiffness: 400,
+                damping: 30,
+              }}
+              className="fixed inset-0 z-40 min-h-screen overflow-hidden rounded-none bg-white/45 backdrop-blur-lg sm:inset-x-6 sm:inset-y-8 sm:rounded-xl md:inset-x-12"
+            >
+              <div className="flex h-full flex-col">
+                <div className="flex flex-1 items-center justify-center bg-gray-50/50 p-2 sm:p-3 md:p-4">
+                  <AnimatePresence mode="wait">
+                    <motion.button
+                      type="button"
+                      key={selectedItem.src}
+                      className="relative h-auto max-h-[70vh] w-full max-w-[95%] overflow-hidden rounded-lg bg-gray-900/20 shadow-md sm:max-w-[85%] md:max-w-3xl"
+                      initial={{ y: 20, scale: 0.97 }}
+                      animate={{
+                        y: 0,
+                        scale: 1,
+                        transition: {
+                          type: "spring",
+                          stiffness: 500,
+                          damping: 30,
+                          mass: 0.5,
+                        },
+                      }}
+                      exit={{
+                        y: 20,
+                        scale: 0.97,
+                        transition: { duration: 0.15 },
+                      }}
+                      onClick={() => setSelectedItem(null)}
+                      aria-label="Close gallery image"
+                    >
+                      <span className="block aspect-video w-full">
+                        <GalleryImage src={selectedItem.src} alt={selectedItem.alt} className="object-contain" priority />
+                      </span>
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent p-2 text-left sm:p-3 md:p-4">
+                        <h3 className="text-base font-semibold text-white sm:text-lg md:text-xl">{captionFor(selectedItem)}</h3>
+                        <p className="mt-1 text-xs text-white/80 sm:text-sm">{selectedItem.alt}</p>
+                      </div>
+                    </motion.button>
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              <motion.button
+                type="button"
+                className="absolute right-2 top-2 rounded-full bg-gray-200/80 p-2 text-gray-700 backdrop-blur-sm hover:bg-gray-300/80 sm:right-2.5 sm:top-2.5 md:right-3 md:top-3"
+                onClick={() => setSelectedItem(null)}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                aria-label="Close gallery"
+              >
+                <X className="h-3 w-3" />
+              </motion.button>
+            </motion.div>
+
+            <motion.div
+              drag
+              dragMomentum={false}
+              dragElastic={0.1}
+              initial={false}
+              animate={{ x: dockPosition.x, y: dockPosition.y }}
+              onDragEnd={(_, info) => {
+                setDockPosition((currentPosition) => ({
+                  x: currentPosition.x + info.offset.x,
+                  y: currentPosition.y + info.offset.y,
+                }));
+              }}
+              className="fixed bottom-4 left-1/2 z-50 touch-none"
+            >
+              <motion.div className="relative -translate-x-1/2 cursor-grab rounded-xl border border-blue-400/30 bg-sky-400/20 shadow-lg backdrop-blur-xl active:cursor-grabbing">
+                <div className="flex items-center -space-x-2 px-3 py-2">
+                  {items.map((item, index) => (
+                    <motion.button
+                      key={`${item.src}-${index}`}
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setSelectedItem(item);
+                      }}
+                      style={{
+                        zIndex: selectedItem.src === item.src ? 30 : items.length - index,
+                      }}
+                      className={cn(
+                        "relative h-8 w-8 shrink-0 overflow-hidden rounded-lg sm:h-9 sm:w-9 md:h-10 md:w-10",
+                        selectedItem.src === item.src ? "ring-2 ring-white/70 shadow-lg" : "hover:ring-2 hover:ring-white/30",
+                      )}
+                      initial={{ rotate: index % 2 === 0 ? -15 : 15 }}
+                      animate={{
+                        scale: selectedItem.src === item.src ? 1.2 : 1,
+                        rotate: selectedItem.src === item.src ? 0 : index % 2 === 0 ? -15 : 15,
+                        y: selectedItem.src === item.src ? -8 : 0,
+                      }}
+                      whileHover={{
+                        scale: 1.3,
+                        rotate: 0,
+                        y: -10,
+                        transition: { type: "spring", stiffness: 400, damping: 25 },
+                      }}
+                      aria-label={`Show ${captionFor(item)}`}
+                    >
+                      <GalleryImage src={item.src} alt={item.alt} className="object-cover" />
+                      <span className="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-white/20" />
+                      {selectedItem.src === item.src && (
+                        <motion.span
+                          layoutId="activeGlow"
+                          className="absolute -inset-2 bg-white/20 blur-xl"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.2 }}
+                        />
+                      )}
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            </motion.div>
+          </>
+        ) : (
+          <motion.div
+            className="grid auto-rows-[60px] grid-cols-1 gap-3 sm:grid-cols-3 md:grid-cols-4"
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.1 },
+              },
+            }}
+          >
+            {items.map((item, index) => (
+              <motion.div
+                key={`${item.src}-${index}`}
+                layoutId={`media-${item.src}`}
+                className={cn("relative min-h-[220px] cursor-move overflow-hidden rounded-xl sm:min-h-0", bentoSpans[index % bentoSpans.length])}
+                onClick={() => !isDragging && setSelectedItem(item)}
+                variants={{
+                  hidden: { y: 50, scale: 0.9, opacity: 0 },
+                  visible: {
+                    y: 0,
+                    scale: 1,
+                    opacity: 1,
+                    transition: {
+                      type: "spring",
+                      stiffness: 350,
+                      damping: 25,
+                      delay: index * 0.05,
+                    },
+                  },
+                }}
+                whileHover={{ scale: 1.02 }}
+                drag
+                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+                dragElastic={1}
+                onDragStart={() => setIsDragging(true)}
+                onDragEnd={(_, info) => reorderItem(index, info)}
+              >
+                <GalleryImage src={item.src} alt={item.alt} className="object-cover" priority={index === 0} />
+                <motion.div
+                  className="absolute inset-0 flex flex-col justify-end p-2 opacity-100 sm:p-3 md:p-4 lg:opacity-0"
+                  whileHover={{ opacity: 1 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                  <h3 className="relative line-clamp-1 text-xs font-medium text-white sm:text-sm md:text-base">{captionFor(item)}</h3>
+                  <p className="relative mt-0.5 line-clamp-2 text-[10px] text-white/70 sm:text-xs md:text-sm">{item.alt}</p>
+                </motion.div>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 export function StaggeredPhotoGallerySection({
@@ -119,17 +330,18 @@ export function StaggeredPhotoGallerySection({
   section: CmsSection;
   collections: GalleryCollectionDto[];
 }) {
-  const [activeSlug, setActiveSlug] = useState(collections[0]?.slug ?? "");
-  const activeCollection = collections.find((collection) => collection.slug === activeSlug) ?? collections[0];
+  const galleryCollections = collections.filter((collection) =>
+    ["famous-figures", "historical-photos", "landmarks"].includes(collection.slug),
+  );
+  const [activeSlug, setActiveSlug] = useState(galleryCollections[0]?.slug ?? "");
+  const activeCollection = galleryCollections.find((collection) => collection.slug === activeSlug) ?? galleryCollections[0];
   const images =
     activeCollection?.images.map((image) => ({
       ...image,
       caption: image.caption ?? activeCollection.title,
     })) ?? [];
+  const isBentoCollection = activeCollection?.slug === "historical-photos" || activeCollection?.slug === "landmarks";
   const isFamousFigures = activeCollection?.slug === "famous-figures";
-  const isCarouselCollection =
-    activeCollection?.slug === "historical-photos" || activeCollection?.slug === "landmarks";
-  const chunks = chunkImages(images, 4);
   const title = typeof section.content.title === "string" ? section.content.title : "PHOTO GALLERY";
   const subtitle =
     typeof section.content.subtitle === "string"
@@ -150,7 +362,7 @@ export function StaggeredPhotoGallerySection({
         </ContainerStagger>
 
         <div className="mb-12 flex flex-wrap gap-3 border-b border-black/10 pb-6">
-          {collections.map((collection) => (
+          {galleryCollections.map((collection) => (
             <button
               key={collection.id}
               type="button"
@@ -169,55 +381,14 @@ export function StaggeredPhotoGallerySection({
         </div>
 
         {isFamousFigures ? (
-          <ContainerAnimated className="rounded-[24px] border border-black/10 bg-[var(--color-parchment)] px-4 py-10 shadow-[0_30px_90px_rgba(0,0,0,0.08)] md:px-10">
-            <div className="mb-8 flex flex-col gap-3 text-center">
-              <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-heritage-green)]">Interactive archive</p>
-              <h2 className="text-[clamp(2rem,5vw,4.5rem)] font-[var(--font-heading-weight)] uppercase leading-none">
-                Famous Figures
-              </h2>
-            </div>
-            <ResponsiveSphereImageGrid
-              images={images.map((image, index) => ({
-                id: `${activeCollection?.id ?? "famous-figures"}-${index}`,
-                src: image.src,
-                alt: image.alt,
-                title: image.alt,
-                description: image.caption ?? image.alt,
-              }))}
-              autoRotate
-              autoRotateSpeed={0.18}
-              dragSensitivity={0.45}
-              baseImageScale={0.13}
-              hoverScale={1.25}
-              className="mx-auto"
-            />
+          <ContainerAnimated>
+            <ProfileCardGallery images={images} />
           </ContainerAnimated>
-        ) : isCarouselCollection ? (
-          <ContainerAnimated className="rounded-[24px] border border-black/10 bg-[var(--color-parchment)] py-6 shadow-[0_30px_90px_rgba(0,0,0,0.08)] md:py-8">
-            <div className="mx-auto mb-2 max-w-4xl px-6 text-center">
-              <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-heritage-green)]">
-                {activeCollection?.title}
-              </p>
-            </div>
-            <FramerGalleryCarousel images={images} />
-          </ContainerAnimated>
+        ) : isBentoCollection ? (
+          <InteractiveBentoGallery images={images} title={activeCollection?.title ?? ""} />
         ) : (
-          <div className="grid gap-16 lg:grid-cols-2">
-            {chunks.map((chunk, chunkIndex) => (
-              <ContainerStagger key={`gallery-chunk-${chunkIndex}`} className="mx-auto w-full max-w-[560px]">
-                <GalleryGrid>
-                  {chunk.map((image, index) => (
-                    <GalleryGridCell key={`${image.src}-${chunkIndex}-${index}`} index={index}>
-                      <GalleryImage src={image.src} alt={image.alt} />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/58 via-black/8 to-transparent" />
-                      <span className="absolute bottom-3 left-3 right-3 text-xs uppercase tracking-[0.14em] text-white/84">
-                        {image.caption ?? image.alt}
-                      </span>
-                    </GalleryGridCell>
-                  ))}
-                </GalleryGrid>
-              </ContainerStagger>
-            ))}
+          <div className="rounded-md border border-dashed border-black/15 bg-white/50 p-8 text-sm text-black/50">
+            No gallery images available.
           </div>
         )}
       </div>

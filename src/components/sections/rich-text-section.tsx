@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import type React from "react";
-import { type HTMLMotionProps, type Variants, motion } from "framer-motion";
+import { useRef } from "react";
+import { type HTMLMotionProps, type Variants, motion, useScroll, useTransform } from "framer-motion";
 
 import { SectionFrame } from "@/components/sections/section-frame";
 import { bodyParagraphs, text } from "@/components/sections/section-content";
@@ -33,10 +33,6 @@ export function RichTextSection({ section }: { section: CmsSection }) {
   );
 }
 
-interface GalleryGridCellProps extends HTMLMotionProps<"div"> {
-  index: number;
-}
-
 const springTransitionConfig = {
   type: "spring",
   stiffness: 100,
@@ -56,18 +52,14 @@ const filterVariants: Variants = {
   },
 };
 
-const areaClasses = [
-  "col-start-2 col-end-3 row-start-1 row-end-3",
-  "col-start-1 col-end-2 row-start-2 row-end-4",
-  "col-start-1 col-end-2 row-start-4 row-end-6",
-  "col-start-2 col-end-3 row-start-3 row-end-5",
-];
-
 const defaultImages = [
   { src: "/lora/gallery/dar-al-anda-art-gallery.jpg", alt: "Dar Al-Anda", caption: "Cultural activity" },
   { src: "/lora/gallery/square-de-paris.jpg", alt: "Paris Square", caption: "Public space" },
   { src: "/lora/gallery/alsaadi-mosque.jpg", alt: "Al Saadi Mosque", caption: "Heritage landmark" },
   { src: "/lora/gallery/blue-house-4.jpg", alt: "Blue House", caption: "Historical architecture" },
+  { src: "/lora/gallery/luzmila-hospital.jpg", alt: "Luzmila Hospital", caption: "Neighborhood landmark" },
+  { src: "/lora/gallery/luweibdeh-flower.jpg", alt: "Luweibdeh Flower", caption: "Local memory" },
+  { src: "/lora/gallery/dscf0022.jpg", alt: "Luweibdeh street detail", caption: "Street detail" },
 ];
 
 function getImages(section: CmsSection) {
@@ -82,7 +74,11 @@ function getImages(section: CmsSection) {
       caption: typeof image.caption === "string" ? image.caption : undefined,
     }));
 
-  return parsed.length >= 4 ? parsed.slice(0, 4) : defaultImages;
+  const mergedImages = [...parsed, ...defaultImages].filter(
+    (image, index, allImages) => allImages.findIndex((candidate) => candidate.src === image.src) === index,
+  );
+
+  return mergedImages.slice(0, 7);
 }
 
 function ContainerStagger({ transition, ...props }: HTMLMotionProps<"div">) {
@@ -116,32 +112,6 @@ function ContainerAnimated({ transition, ...props }: HTMLMotionProps<"div">) {
   );
 }
 
-function GalleryGrid({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn("grid grid-cols-2 grid-rows-[50px_150px_50px_150px_50px] gap-4", className)}
-      {...props}
-    />
-  );
-}
-
-function GalleryGridCell({ className, transition, index, ...props }: GalleryGridCellProps) {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      whileInView={{ opacity: 1 }}
-      viewport={{ once: true }}
-      transition={{
-        duration: 0.3,
-        delay: index * 0.2,
-        delayChildren: transition?.delayChildren ?? 0.2,
-      }}
-      className={cn("relative overflow-hidden rounded-xl shadow-xl", areaClasses[index], className)}
-      {...props}
-    />
-  );
-}
-
 function WhatWeDoGallerySection({ section }: { section: CmsSection }) {
   const paragraphs = bodyParagraphs(section.content);
   const images = getImages(section);
@@ -149,25 +119,9 @@ function WhatWeDoGallerySection({ section }: { section: CmsSection }) {
   const subtitle = text(section.content, "subtitle", "Community work for cultural, environmental, and heritage continuity.");
 
   return (
-    <SectionFrame section={section} className="bg-[var(--color-soft-white)] pt-32">
-      <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[0.92fr_1.08fr]">
-        <ContainerStagger className="order-2 lg:order-1">
-          <GalleryGrid className="mx-auto w-full max-w-[520px]">
-            {images.map((image, index) => (
-              <GalleryGridCell key={`${image.src}-${index}`} index={index}>
-                <Image src={image.src} alt={image.alt} fill className="object-cover" sizes="(min-width: 1024px) 260px, 50vw" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/46 via-black/4 to-transparent" />
-                {image.caption ? (
-                  <span className="absolute bottom-3 left-3 right-3 text-xs uppercase tracking-[0.14em] text-white/78">
-                    {image.caption}
-                  </span>
-                ) : null}
-              </GalleryGridCell>
-            ))}
-          </GalleryGrid>
-        </ContainerStagger>
-
-        <ContainerStagger className="order-1 lg:order-2">
+    <SectionFrame section={section} className="bg-[var(--color-soft-white)] !px-0 !py-0">
+      <div className="mx-auto max-w-7xl px-5 pt-32 sm:px-8 lg:px-10">
+        <ContainerStagger className="max-w-4xl">
           <ContainerAnimated>
             <p className="mb-5 text-xs uppercase tracking-[0.22em] text-[var(--color-heritage-green)]">LORA</p>
             <h1 className="max-w-3xl text-[clamp(3.4rem,8vw,7rem)] font-[var(--font-heading-weight)] leading-[0.9]">
@@ -175,8 +129,13 @@ function WhatWeDoGallerySection({ section }: { section: CmsSection }) {
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-8 text-black/62">{subtitle}</p>
           </ContainerAnimated>
+        </ContainerStagger>
+      </div>
 
-          <div className="mt-10 grid gap-4">
+      <ZoomParallax images={images} />
+
+      <div className="mx-auto max-w-7xl px-5 pb-28 sm:px-8 lg:px-10">
+        <ContainerStagger className="grid gap-4 lg:grid-cols-2">
             {paragraphs.map((paragraph, index) => (
               <ContainerAnimated
                 key={paragraph}
@@ -188,9 +147,65 @@ function WhatWeDoGallerySection({ section }: { section: CmsSection }) {
                 {paragraph}
               </ContainerAnimated>
             ))}
-          </div>
         </ContainerStagger>
       </div>
     </SectionFrame>
+  );
+}
+
+function ZoomParallax({ images }: { images: Array<{ src: string; alt?: string; caption?: string }> }) {
+  const container = useRef<HTMLDivElement | null>(null);
+  const { scrollYProgress } = useScroll({
+    target: container,
+    offset: ["start start", "end end"],
+  });
+
+  const scale4 = useTransform(scrollYProgress, [0, 1], [1, 4]);
+  const scale5 = useTransform(scrollYProgress, [0, 1], [1, 5]);
+  const scale6 = useTransform(scrollYProgress, [0, 1], [1, 6]);
+  const scale8 = useTransform(scrollYProgress, [0, 1], [1, 8]);
+  const scale9 = useTransform(scrollYProgress, [0, 1], [1, 9]);
+  const scales = [scale4, scale5, scale6, scale5, scale6, scale8, scale9];
+
+  return (
+    <div ref={container} className="relative h-[300vh]">
+      <div className="sticky top-0 h-screen overflow-hidden">
+        {images.map(({ src, alt, caption }, index) => {
+          const scale = scales[index % scales.length];
+
+          return (
+            <motion.div
+              key={`${src}-${index}`}
+              style={{ scale }}
+              className={cn(
+                "absolute top-0 flex h-full w-full items-center justify-center",
+                index === 1 && "[&>div]:!-top-[30vh] [&>div]:!left-[5vw] [&>div]:!h-[30vh] [&>div]:!w-[35vw]",
+                index === 2 && "[&>div]:!-top-[10vh] [&>div]:!-left-[25vw] [&>div]:!h-[45vh] [&>div]:!w-[20vw]",
+                index === 3 && "[&>div]:!left-[27.5vw] [&>div]:!h-[25vh] [&>div]:!w-[25vw]",
+                index === 4 && "[&>div]:!top-[27.5vh] [&>div]:!left-[5vw] [&>div]:!h-[25vh] [&>div]:!w-[20vw]",
+                index === 5 && "[&>div]:!top-[27.5vh] [&>div]:!-left-[22.5vw] [&>div]:!h-[25vh] [&>div]:!w-[30vw]",
+                index === 6 && "[&>div]:!top-[22.5vh] [&>div]:!left-[25vw] [&>div]:!h-[15vh] [&>div]:!w-[15vw]",
+              )}
+            >
+              <div className="relative h-[25vh] w-[25vw] overflow-hidden bg-black">
+                <Image
+                  src={src}
+                  alt={alt || `Parallax image ${index + 1}`}
+                  fill
+                  className="object-cover"
+                  sizes="(min-width: 1024px) 40vw, 70vw"
+                  priority={index === 0}
+                />
+                {caption ? (
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent p-3">
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-white/82 sm:text-xs">{caption}</p>
+                  </div>
+                ) : null}
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+    </div>
   );
 }

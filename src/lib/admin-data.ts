@@ -99,7 +99,7 @@ export async function listAdminMedia() {
   const prisma = getPrisma();
   if (!prisma) return [];
   return prisma.mediaAsset.findMany({
-    where: { type: "IMAGE", source: "google drive" },
+    where: { type: { in: ["IMAGE", "VIDEO"] }, source: "google drive" },
     select: { id: true, url: true, alt: true, caption: true, source: true, metadata: true },
     orderBy: { createdAt: "desc" },
   });

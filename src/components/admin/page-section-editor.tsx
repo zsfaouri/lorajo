@@ -60,6 +60,7 @@ const sectionTypeOptions = [
   ["cta", "Call to action"],
   ["contact_form", "Contact form"],
   ["newsletter_signup", "Newsletter signup"],
+  ["neighborhood_archive", "Neighborhood archive"],
 ] as const;
 
 const variantOptions: Record<string, Array<[string, string]>> = {
@@ -104,6 +105,7 @@ const variantOptions: Record<string, Array<[string, string]>> = {
     ["cards", "Cards"],
     ["list", "List"],
   ],
+  neighborhood_archive: [["searchable_library", "Searchable library"]],
 };
 
 function asEditableSection(section: Section): EditableSection {
@@ -162,6 +164,7 @@ function defaultContentForType(type: string) {
   if (type === "newsletter_signup") return { title: "Newsletter", body: "", buttonLabel: "Subscribe" };
   if (type === "event_list") return { title: "Events", subtitle: "Upcoming gatherings, meetings, and neighborhood programs." };
   if (type === "announcement_list") return { title: "Announcements", subtitle: "Latest updates from LORA." };
+  if (type === "neighborhood_archive") return { title: "Neighborhood Archive", subtitle: "Search names, photographs, videos, and memory fragments connected to Jabal Al-Luweibdeh." };
   if (type === "gallery_grid") return { title: "Image gallery", items: [] };
   if (type === "image_text") return { title: "New section", body: "", image: "" };
   if (type === "cta") return { title: "Call to action", body: "", cta: { label: "Open", href: "/" } };

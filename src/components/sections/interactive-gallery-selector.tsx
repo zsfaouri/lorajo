@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { Aperture, Archive, Landmark, Leaf, Users } from "lucide-react";
 
+import { ProfileCardGallery } from "@/components/sections/profile-card-gallery";
 import { SectionFrame } from "@/components/sections/section-frame";
+import { InteractiveBentoGallery } from "@/components/sections/staggered-photo-gallery-section";
 import type { CmsSection, GalleryCollectionDto } from "@/types/cms";
 
 const iconMap = [Archive, Landmark, Users, Leaf, Aperture];
@@ -18,7 +20,7 @@ type SelectorOption = {
 };
 
 function getOptions(collections: GalleryCollectionDto[]): SelectorOption[] {
-  return collections.flatMap((collection) =>
+  return collections.filter((collection) => collection.slug !== "famous-figures" && ["historical-photos", "landmarks"].includes(collection.slug)).flatMap((collection) =>
     collection.images.map((image) => ({
       title: image.caption ?? image.alt,
       description: collection.title,
@@ -39,6 +41,9 @@ export function InteractiveGallerySelector({
   const [activeIndex, setActiveIndex] = useState(0);
   const [animatedOptions, setAnimatedOptions] = useState<number[]>([]);
   const options = useMemo(() => getOptions(collections), [collections]);
+  const galleryCollections = collections.filter((collection) =>
+    ["famous-figures", "historical-photos", "landmarks"].includes(collection.slug),
+  );
   const title = typeof section.content.title === "string" ? section.content.title : "PHOTO GALLERY";
   const subtitle =
     typeof section.content.subtitle === "string"
@@ -153,7 +158,7 @@ export function InteractiveGallerySelector({
         </div>
 
         <div className="relative z-10 mt-16 w-full max-w-7xl space-y-14">
-          {collections.map((collection) => (
+          {galleryCollections.map((collection) => (
             <section key={collection.id} aria-label={collection.title}>
               <div className="mb-5 flex flex-col justify-between gap-3 border-b border-white/12 pb-4 md:flex-row md:items-end">
                 <div>
@@ -167,25 +172,21 @@ export function InteractiveGallerySelector({
                 <span className="text-xs uppercase tracking-[0.18em] text-white/38">{collection.images.length} images</span>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {collection.images.map((image, imageIndex) => (
-                  <figure
-                    key={`${collection.id}-${image.src}-${imageIndex}`}
-                    className="group overflow-hidden border border-white/10 bg-white/[0.03]"
-                  >
-                    <div className={imageIndex % 3 === 0 ? "relative aspect-[4/5]" : "relative aspect-[5/4]"}>
-                      <Image
-                        src={image.src}
-                        alt={image.alt}
-                        fill
-                        sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                        className="object-cover grayscale-[0.18] transition duration-500 group-hover:scale-105 group-hover:grayscale-0"
-                      />
-                    </div>
-                    <figcaption className="px-4 py-3 text-sm text-white/64">{image.caption ?? image.alt}</figcaption>
-                  </figure>
-                ))}
-              </div>
+              {collection.slug === "famous-figures" ? (
+                <div className="bg-white px-4 py-8 md:px-8">
+                  <ProfileCardGallery images={collection.images} />
+                </div>
+              ) : (
+                <div className="rounded-[24px] border border-white/10 bg-white px-4 py-8 text-black md:px-8">
+                  <InteractiveBentoGallery
+                    images={collection.images.map((image) => ({
+                      ...image,
+                      caption: image.caption ?? collection.title,
+                    }))}
+                    title={collection.title}
+                  />
+                </div>
+              )}
             </section>
           ))}
         </div>

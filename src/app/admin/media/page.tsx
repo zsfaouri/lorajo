@@ -25,6 +25,9 @@ export default async function MediaLibraryPage() {
       })
         .then((collections) => collections.filter((collection) => collection.slug !== "hero-pics"))
     : [];
+  const mediaAssets = prisma
+    ? await prisma.mediaAsset.findMany({ where: { type: "IMAGE", source: "google drive" }, orderBy: { createdAt: "desc" } })
+    : [];
 
-  return <GalleryAlbumManager initialCollections={collections} />;
+  return <GalleryAlbumManager initialCollections={collections} mediaAssets={mediaAssets} />;
 }

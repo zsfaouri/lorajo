@@ -38,6 +38,7 @@ function canonicalCategory(value: string) {
   if (["founders", "founding-members"].includes(slug)) return "founding-members";
   if (["hero", "hero-pics", "hero-pictures"].includes(slug)) return "hero-pics";
   if (["historical-pics", "historical-photos", "history"].includes(slug)) return "historical-photos";
+  if (["archive", "neighborhood", "neighborhood-archive", "names-library", "name-library"].includes(slug)) return "neighborhood-archive";
   return slug;
 }
 

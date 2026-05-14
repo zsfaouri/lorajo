@@ -1,4 +1,4 @@
-import { Locale, PublishState } from "@prisma/client";
+import { Locale, MediaType, PublishState } from "@prisma/client";
 import { unstable_noStore as noStore } from "next/cache";
 
 import {
@@ -6,10 +6,11 @@ import {
   fallbackGallery,
   fallbackMembers,
   fallbackNavigation,
+  fallbackNeighborhoodArchive,
   fallbackPages,
   fallbackTheme,
 } from "@/lib/fallback-data";
-import { getDriveGalleryCollections } from "@/lib/drive-gallery";
+import { getDriveGalleryCollections, getDriveNeighborhoodArchiveItems } from "@/lib/drive-gallery";
 import { getPrisma } from "@/lib/prisma";
 import { isRecord } from "@/lib/utils";
 import type {
@@ -20,6 +21,7 @@ import type {
   GalleryCollectionDto,
   LocaleCode,
   MemberDto,
+  NeighborhoodArchiveItem,
   NavigationItemDto,
   ThemeTokens,
 } from "@/types/cms";
@@ -34,6 +36,27 @@ function toLocaleCode(locale: Locale): LocaleCode {
 
 function asRecord(value: unknown): Record<string, unknown> {
   return isRecord(value) ? value : {};
+}
+
+function galleryTitleForSlug(slug: string, title: string) {
+  if (slug === "famous-figures") return "Famous Figures";
+  if (slug === "historical-photos") return "Historical Pics";
+  if (slug === "landmarks") return "Landmarks";
+  return title;
+}
+
+const publicGallerySlugs = ["famous-figures", "historical-photos", "landmarks"];
+
+function defaultNavigationItem(locale: LocaleCode): NavigationItemDto {
+  return locale === "ar"
+    ? { id: "nav-ar-neighborhood-archive", label: "أرشيف الحي", path: "/ar/neighborhood-archive", sortOrder: 5, isVisible: true }
+    : { id: "nav-en-neighborhood-archive", label: "NEIGHBORHOOD ARCHIVE", path: "/en/neighborhood-archive", sortOrder: 5, isVisible: true };
+}
+
+function withDefaultNavigation(locale: LocaleCode, items: NavigationItemDto[]) {
+  const archivePath = `/${locale}/neighborhood-archive`;
+  if (items.some((item) => item.path === archivePath || item.label.toLowerCase() === "neighborhood archive")) return items;
+  return [...items, defaultNavigationItem(locale)].sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
 export async function getActiveTheme(): Promise<ThemeTokens> {
@@ -52,7 +75,7 @@ export async function getActiveTheme(): Promise<ThemeTokens> {
 export async function getNavigation(locale: LocaleCode): Promise<NavigationItemDto[]> {
   noStore();
   const prisma = getPrisma();
-  if (!prisma) return fallbackNavigation[locale];
+  if (!prisma) return withDefaultNavigation(locale, fallbackNavigation[locale]);
 
   try {
     const items = await prisma.navigationItem.findMany({
@@ -60,15 +83,15 @@ export async function getNavigation(locale: LocaleCode): Promise<NavigationItemD
       orderBy: { sortOrder: "asc" },
     });
 
-    return items.map((item) => ({
+    return withDefaultNavigation(locale, items.map((item) => ({
       id: item.id,
       label: item.label,
       path: item.path,
       sortOrder: item.sortOrder,
       isVisible: item.isVisible,
-    }));
+    })));
   } catch {
-    return fallbackNavigation[locale];
+    return withDefaultNavigation(locale, fallbackNavigation[locale]);
   }
 }
 
@@ -225,7 +248,7 @@ export async function getGalleryCollections(locale: LocaleCode): Promise<Gallery
 
   try {
     const collections = await prisma.galleryCollection.findMany({
-      where: { locale: toPrismaLocale(locale), status: PublishState.PUBLISHED },
+      where: { locale: toPrismaLocale(locale), status: PublishState.PUBLISHED, slug: { in: publicGallerySlugs } },
       include: {
         images: {
           include: { mediaAsset: true },
@@ -237,7 +260,7 @@ export async function getGalleryCollections(locale: LocaleCode): Promise<Gallery
 
     const databaseCollections = collections.map((collection) => ({
       id: collection.id,
-      title: collection.title,
+      title: galleryTitleForSlug(collection.slug, collection.title),
       slug: collection.slug,
       description: collection.description,
       sortOrder: collection.sortOrder,
@@ -249,25 +272,72 @@ export async function getGalleryCollections(locale: LocaleCode): Promise<Gallery
     }));
 
     if (driveCollections.length > 0) {
-      return driveCollections.map((driveCollection) => {
+      const mergedCollections = driveCollections.map((driveCollection) => {
         const databaseCollection = databaseCollections.find((collection) => collection.slug === driveCollection.slug);
-        if (!databaseCollection) return driveCollection;
+        if (!databaseCollection) return { ...driveCollection, title: galleryTitleForSlug(driveCollection.slug, driveCollection.title) };
 
         return {
           ...driveCollection,
-          title: databaseCollection.title || driveCollection.title,
+          title: databaseCollection.title || galleryTitleForSlug(driveCollection.slug, driveCollection.title),
           description: databaseCollection.description ?? driveCollection.description,
-          images: driveCollection.images.map((driveImage) => {
-            const databaseImage = databaseCollection.images.find((image) => image.src === driveImage.src);
-            return databaseImage ? { ...driveImage, alt: databaseImage.alt, caption: databaseImage.caption } : driveImage;
-          }),
+          images:
+            driveCollection.images.length > 0
+              ? driveCollection.images.map((driveImage) => {
+                  const databaseImage = databaseCollection.images.find((image) => image.src === driveImage.src);
+                  return databaseImage ? { ...driveImage, alt: databaseImage.alt, caption: databaseImage.caption } : driveImage;
+                })
+              : databaseCollection.images,
         };
       });
+
+      const driveSlugs = new Set(mergedCollections.map((collection) => collection.slug));
+      return [
+        ...mergedCollections,
+        ...databaseCollections.filter((collection) => !driveSlugs.has(collection.slug)),
+      ].sort((a, b) => a.sortOrder - b.sortOrder);
     }
 
     return databaseCollections;
   } catch {
     return driveCollections.length > 0 ? driveCollections : fallbackGallery;
+  }
+}
+
+export async function getNeighborhoodArchiveItems(locale: LocaleCode): Promise<NeighborhoodArchiveItem[]> {
+  noStore();
+  const prisma = getPrisma();
+  const driveItems = await getDriveNeighborhoodArchiveItems().catch(() => []);
+  if (!prisma) return driveItems.length > 0 ? driveItems : fallbackNeighborhoodArchive;
+
+  try {
+    const collection = await prisma.galleryCollection.findUnique({
+      where: { locale_slug: { locale: toPrismaLocale(locale), slug: "neighborhood-archive" } },
+      include: {
+        images: {
+          include: { mediaAsset: true },
+          orderBy: { sortOrder: "asc" },
+        },
+      },
+    });
+
+    const databaseItems =
+      collection?.images.map((item) => {
+        const metadata = asRecord(item.mediaAsset.metadata);
+        const thumbnail = typeof metadata.thumbnailUrl === "string" ? metadata.thumbnailUrl : item.mediaAsset.publicId ? `https://drive.google.com/thumbnail?id=${encodeURIComponent(item.mediaAsset.publicId)}&sz=w2000` : null;
+        return {
+          id: item.id,
+          name: item.alt || item.mediaAsset.alt || "Archive item",
+          text: item.caption ?? item.mediaAsset.caption ?? null,
+          mediaType: item.mediaAsset.type === MediaType.VIDEO ? "VIDEO" : "IMAGE",
+          src: item.mediaAsset.url,
+          thumbnail,
+          folder: typeof metadata.driveFolderName === "string" ? metadata.driveFolderName : collection.title,
+        } satisfies NeighborhoodArchiveItem;
+      }) ?? [];
+
+    return databaseItems.length > 0 ? databaseItems : driveItems.length > 0 ? driveItems : fallbackNeighborhoodArchive;
+  } catch {
+    return driveItems.length > 0 ? driveItems : fallbackNeighborhoodArchive;
   }
 }
 

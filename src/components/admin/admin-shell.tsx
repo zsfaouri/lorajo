@@ -2,10 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   CalendarDays,
   Images,
+  Archive,
   ContactRound,
   FileText,
   FolderPlus,
@@ -35,6 +36,7 @@ const navGroups = [
       { label: "Create New Page", href: "/admin/pages", icon: FileText },
       { label: "Who We Are", href: "/admin/who-we-are", icon: ContactRound },
       { label: "What We Do", href: "/admin/what-we-do", icon: Library },
+      { label: "Neighborhood Archive", href: "/admin/neighborhood-archive", icon: Archive },
       { label: "Events", href: "/admin/events", icon: CalendarDays },
       { label: "Announcements", href: "/admin/announcements", icon: FileText },
       { label: "Projects", href: "/admin/projects", icon: GalleryHorizontalEnd },
@@ -49,6 +51,7 @@ const navGroups = [
       { label: "Famous Figures", href: "/admin/media?folder=famous-figures", icon: Users, folder: "famous-figures" },
       { label: "Landmarks", href: "/admin/media?folder=landmarks", icon: GalleryHorizontalEnd, folder: "landmarks" },
       { label: "Historical Pics", href: "/admin/media?folder=historical-photos", icon: Images, folder: "historical-photos" },
+      { label: "Neighborhood Archive Media", href: "/admin/media?folder=neighborhood-archive", icon: Archive, folder: "neighborhood-archive" },
     ],
   },
   {
@@ -78,9 +81,15 @@ const nav = navGroups.flatMap((group) => group.items);
 
 export function AdminShell({ children, className }: { children: React.ReactNode; className?: string }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   function isActive(item: (typeof nav)[number]) {
-    const hrefPath = item.href.split("?")[0];
+    const [hrefPath, hrefQuery] = item.href.split("?");
+    if (hrefQuery) {
+      const expected = new URLSearchParams(hrefQuery);
+      return pathname === hrefPath && [...expected.entries()].every(([key, value]) => searchParams.get(key) === value);
+    }
+    if (hrefPath === "/admin/media") return pathname === hrefPath && !searchParams.get("folder");
     return pathname === hrefPath || (hrefPath !== "/admin" && pathname.startsWith(`${hrefPath}/`));
   }
 

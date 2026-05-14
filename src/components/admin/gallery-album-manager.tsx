@@ -2,9 +2,10 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { ExternalLink, RefreshCw } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ExternalLink, Plus, RefreshCw } from "lucide-react";
 
+import { DriveImagePicker, type DriveMediaAsset } from "@/components/admin/drive-image-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,12 @@ type GalleryCollection = {
   images: GalleryImage[];
 };
 
+type NewProfileForm = {
+  asset: DriveMediaAsset | null;
+  alt: string;
+  caption: string;
+};
+
 function SmartImage({ src, alt }: { src: string; alt: string }) {
   return <Image src={src} alt={alt} fill className="object-cover" sizes="(min-width: 1024px) 280px, 50vw" unoptimized />;
 }
@@ -52,25 +59,53 @@ function initialImageText(collections: GalleryCollection[]) {
   );
 }
 
-function collectionIdFromSlug(collections: GalleryCollection[], slug: string | null) {
-  return collections.find((collection) => collection.slug === slug)?.id ?? collections[0]?.id ?? "";
+function canonicalMediaSlug(value: string | null) {
+  const slug = (value ?? "")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  if (["famous", "famous-figures", "famous-figuers"].includes(slug)) return "famous-figures";
+  if (["landmark", "landmarks"].includes(slug)) return "landmarks";
+  if (["historical-pic", "historical-pics", "historical-photo", "historical-photos", "historcal-pic", "historcal-pics"].includes(slug)) {
+    return "historical-photos";
+  }
+  if (["archive", "neighborhood", "neighborhood-archive", "names-library", "name-library"].includes(slug)) return "neighborhood-archive";
+  return slug;
 }
 
-export function GalleryAlbumManager({ initialCollections }: { initialCollections: GalleryCollection[]; mediaAssets?: MediaAsset[] }) {
+function collectionIdFromSlug(collections: GalleryCollection[], slug: string | null) {
+  const requestedSlug = canonicalMediaSlug(slug);
+  return collections.find((collection) => canonicalMediaSlug(collection.slug) === requestedSlug)?.id ?? collections[0]?.id ?? "";
+}
+
+const emptyNewProfile: NewProfileForm = { asset: null, alt: "", caption: "" };
+
+export function GalleryAlbumManager({ initialCollections, mediaAssets = [] }: { initialCollections: GalleryCollection[]; mediaAssets?: MediaAsset[] }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const requestedFolder = searchParams.get("folder");
   const [collections, setCollections] = useState(initialCollections);
   const [activeId, setActiveId] = useState(() => collectionIdFromSlug(initialCollections, requestedFolder));
   const [status, setStatus] = useState("");
   const [newFolderName, setNewFolderName] = useState("");
+  const [newProfile, setNewProfile] = useState<NewProfileForm>(emptyNewProfile);
   const [imageText, setImageText] = useState<Record<string, { alt: string; caption: string }>>(initialImageText(initialCollections));
   const active = useMemo(() => collections.find((collection) => collection.id === activeId) ?? collections[0], [activeId, collections]);
+  const activeIsFamousFigures = active?.slug === "famous-figures";
 
   useEffect(() => {
     if (!requestedFolder) return;
     const requestedId = collectionIdFromSlug(collections, requestedFolder);
     if (requestedId) setActiveId(requestedId);
   }, [collections, requestedFolder]);
+
+  function openCollection(collection: GalleryCollection) {
+    setActiveId(collection.id);
+    setNewProfile(emptyNewProfile);
+    router.replace(`/admin/media?folder=${collection.slug}`, { scroll: false });
+  }
 
   async function reloadCollections(nextActiveId = active?.id ?? "") {
     const response = await fetch("/api/admin/gallery", { cache: "no-store" });
@@ -82,6 +117,7 @@ export function GalleryAlbumManager({ initialCollections }: { initialCollections
     setCollections(json);
     setImageText(initialImageText(json));
     setActiveId(nextActiveId || json[0]?.id || "");
+    setNewProfile(emptyNewProfile);
   }
 
   async function syncDrive() {
@@ -141,6 +177,49 @@ export function GalleryAlbumManager({ initialCollections }: { initialCollections
       })),
     );
     setStatus("Image text saved.");
+  }
+
+  async function addProfile() {
+    if (!active) return;
+    if (!newProfile.asset) {
+      setStatus("Choose a Google Drive image first.");
+      return;
+    }
+    if (active.images.some((image) => image.mediaAsset.id === newProfile.asset?.id)) {
+      setStatus(activeIsFamousFigures ? "This profile picture is already in the tab." : "This image is already in the tab.");
+      return;
+    }
+
+    const alt = newProfile.alt.trim() || newProfile.asset.alt || newProfile.asset.caption || "Famous figure";
+    if (!alt.trim()) {
+      setStatus("Name / title is required.");
+      return;
+    }
+
+    setStatus(activeIsFamousFigures ? "Adding profile..." : "Adding image...");
+    const response = await fetch(`/api/admin/gallery/${active.id}/images`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mediaAssetId: newProfile.asset.id,
+        alt,
+        caption: newProfile.caption.trim() || null,
+      }),
+    });
+    const json = await response.json();
+    if (!response.ok) {
+      setStatus(json.error ?? (activeIsFamousFigures ? "Could not add profile." : "Could not add image."));
+      return;
+    }
+
+    setCollections((current) =>
+      current.map((collection) =>
+        collection.id === active.id ? { ...collection, images: [...collection.images, json] } : collection,
+      ),
+    );
+    setImageText((current) => ({ ...current, [json.id]: { alt: json.alt, caption: json.caption ?? "" } }));
+    setNewProfile(emptyNewProfile);
+    setStatus(activeIsFamousFigures ? "Profile added." : "Image added.");
   }
 
   async function removeImage(imageId: string) {
@@ -217,7 +296,7 @@ export function GalleryAlbumManager({ initialCollections }: { initialCollections
               <button
                 key={collection.id}
                 type="button"
-                onClick={() => setActiveId(collection.id)}
+                onClick={() => openCollection(collection)}
                 className={cn(
                   "rounded-md border p-3 text-left transition",
                   collection.id === active?.id
@@ -256,6 +335,57 @@ export function GalleryAlbumManager({ initialCollections }: { initialCollections
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">
+              <div className="grid gap-4 rounded-md border border-black/10 bg-black/[0.02] p-4">
+                <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-black">{activeIsFamousFigures ? "Add profile" : "Add image"}</p>
+                    <p className="mt-1 text-sm leading-6 text-black/55">
+                      Pick a synced Google Drive image, then add the text shown on the website.
+                    </p>
+                  </div>
+                  <Button type="button" variant="green" onClick={addProfile} className="shrink-0">
+                    <Plus size={16} />
+                    {activeIsFamousFigures ? "Add profile" : "Add image"}
+                  </Button>
+                </div>
+
+                <DriveImagePicker
+                  assets={mediaAssets}
+                  selectedIds={newProfile.asset ? [newProfile.asset.id] : active.images.map((image) => image.mediaAsset.id)}
+                  onPick={(asset) =>
+                    setNewProfile((current) => ({
+                      ...current,
+                      asset,
+                      alt: current.alt || asset.alt || asset.caption || "",
+                    }))
+                  }
+                  title={activeIsFamousFigures ? "Profile picture" : "Gallery picture"}
+                  description={`Choose from synced Google Drive images in ${active.title}.`}
+                  category={active.slug}
+                  lockCategory
+                  compact
+                />
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label>Name / title</Label>
+                    <Input
+                      value={newProfile.alt}
+                      onChange={(event) => setNewProfile((current) => ({ ...current, alt: event.target.value }))}
+                      placeholder={activeIsFamousFigures ? "Profile name" : "Image title"}
+                    />
+                  </div>
+                  <div className="grid gap-2 md:row-span-2">
+                    <Label>Text shown on website</Label>
+                    <Textarea
+                      value={newProfile.caption}
+                      onChange={(event) => setNewProfile((current) => ({ ...current, caption: event.target.value }))}
+                      className="min-h-28"
+                    />
+                  </div>
+                </div>
+              </div>
+
               {active.images.length === 0 ? (
                 <div className="rounded-md border border-dashed border-black/15 bg-white p-8 text-sm text-black/55">
                   No images in this tab yet. Add images to the matching Google Drive folder, then click Sync Google Drive.

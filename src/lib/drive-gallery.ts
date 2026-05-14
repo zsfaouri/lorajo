@@ -1,7 +1,9 @@
 import { Locale, MediaType, PublishState, type PrismaClient } from "@prisma/client";
 
 import { listGoogleDriveFolder } from "@/lib/google-drive";
-import type { GalleryCollectionDto } from "@/types/cms";
+import type { GalleryCollectionDto, NeighborhoodArchiveItem } from "@/types/cms";
+
+const publicGallerySlugs = new Set(["famous-figures", "historical-photos", "landmarks"]);
 
 function slugifyDriveName(value: string) {
   return value
@@ -12,6 +14,13 @@ function slugifyDriveName(value: string) {
 }
 
 export function driveCollectionTitle(name: string) {
+  const slug = canonicalDriveSlug(name);
+  if (slug === "famous-figures") return "Famous Figures";
+  if (slug === "historical-photos") return "Historical Pics";
+  if (slug === "landmarks") return "Landmarks";
+  if (slug === "neighborhood-archive") return "Neighborhood Archive";
+  if (slug === "hero-pics") return "Hero Pics";
+
   return name
     .replace(/[-_]+/g, " ")
     .replace(/\s+/g, " ")
@@ -33,6 +42,7 @@ export function canonicalDriveSlug(name: string) {
   if (["historical-pics", "historical-photos", "history"].includes(slug)) return "historical-photos";
   if (["founders", "founding-members"].includes(slug)) return "founding-members";
   if (["hero", "hero-pics", "hero-pictures"].includes(slug)) return "hero-pics";
+  if (["archive", "neighborhood", "neighborhood-archive", "names-library", "name-library"].includes(slug)) return "neighborhood-archive";
   return slug || "drive-folder";
 }
 
@@ -63,7 +73,29 @@ export async function getDriveGalleryCollections(): Promise<GalleryCollectionDto
     }),
   );
 
-  return collections.filter((collection) => collection.slug !== "hero-pics" && collection.images.length > 0);
+  return collections.filter((collection) => publicGallerySlugs.has(collection.slug));
+}
+
+export async function getDriveNeighborhoodArchiveItems(): Promise<NeighborhoodArchiveItem[]> {
+  const rootItems = await listGoogleDriveFolder();
+  const folder = rootItems.find((item) => item.type === "folder" && canonicalDriveSlug(item.name) === "neighborhood-archive");
+  if (!folder) return [];
+
+  const items = await listGoogleDriveFolder(folder.id);
+  return items
+    .filter((item) => (item.type === "image" || item.type === "video") && (item.thumbnailUrl || item.url))
+    .map((item) => {
+      const name = driveCaption(item.name) || item.name;
+      return {
+        id: `drive-${item.id}`,
+        name,
+        text: name,
+        mediaType: item.type === "video" ? "VIDEO" : "IMAGE",
+        src: item.type === "video" ? (item.url ?? "") : (item.thumbnailUrl ?? item.url ?? ""),
+        thumbnail: item.thumbnailUrl,
+        folder: folder.name,
+      };
+    });
 }
 
 export async function syncDriveGalleryToDatabase(prisma: PrismaClient) {
@@ -72,7 +104,7 @@ export async function syncDriveGalleryToDatabase(prisma: PrismaClient) {
   const folderImages = await Promise.all(
     folders.map(async (folder) => ({
       folder,
-      images: (await listGoogleDriveFolder(folder.id)).filter((item) => item.type === "image" && item.thumbnailUrl),
+      images: (await listGoogleDriveFolder(folder.id)).filter((item) => (item.type === "image" || item.type === "video") && (item.thumbnailUrl || item.url)),
     })),
   );
 
@@ -114,14 +146,14 @@ export async function syncDriveGalleryToDatabase(prisma: PrismaClient) {
       const caption = driveCaption(image.name);
       return {
         key: `google-drive-${image.id.replace(/[^a-z0-9-]/gi, "-").toLowerCase()}`,
-        type: MediaType.IMAGE,
-        url: image.thumbnailUrl ?? "",
-        secureUrl: image.thumbnailUrl,
+        type: image.type === "video" ? MediaType.VIDEO : MediaType.IMAGE,
+        url: image.type === "video" ? (image.url ?? "") : (image.thumbnailUrl ?? ""),
+        secureUrl: image.type === "video" ? image.url : image.thumbnailUrl,
         publicId: image.id,
         alt: caption || image.name,
         caption: caption || image.name,
         source: "google drive",
-        metadata: { driveFolderId: folder.id, driveFolderName: folder.name, originalName: image.name },
+        metadata: { driveFolderId: folder.id, driveFolderName: folder.name, originalName: image.name, thumbnailUrl: image.thumbnailUrl },
       };
     });
 

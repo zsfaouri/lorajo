@@ -70,7 +70,7 @@ export type DriveBrowserItem = {
   id: string;
   name: string;
   mimeType: string;
-  type: "folder" | "image";
+  type: "folder" | "image" | "video";
   url: string | null;
   thumbnailUrl: string | null;
 };
@@ -104,6 +104,10 @@ export function isGoogleDriveConfigured() {
 
 export function googleDriveImageUrl(fileId: string) {
   return `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w2000`;
+}
+
+export function googleDriveVideoUrl(fileId: string) {
+  return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview`;
 }
 
 function decodeHtml(value: string) {
@@ -140,15 +144,18 @@ async function listGoogleDriveApiFolder(folderId: string): Promise<DriveBrowserI
 
     const isFolder = mimeType === "application/vnd.google-apps.folder";
     const isImage = mimeType.startsWith("image/");
-    if (!isFolder && !isImage) return [];
+    const isVideo = mimeType.startsWith("video/");
+    if (!isFolder && !isImage && !isVideo) return [];
 
     return [
       {
         id,
         name,
         mimeType,
-        type: isFolder ? "folder" : "image",
-        url: file.webViewLink ?? (isFolder ? `https://drive.google.com/drive/folders/${id}` : `https://drive.google.com/file/d/${id}/view`),
+        type: isFolder ? "folder" : isVideo ? "video" : "image",
+        url: isVideo
+          ? googleDriveVideoUrl(id)
+          : file.webViewLink ?? (isFolder ? `https://drive.google.com/drive/folders/${id}` : `https://drive.google.com/file/d/${id}/view`),
         thumbnailUrl: isFolder ? null : googleDriveImageUrl(id),
       } satisfies DriveBrowserItem,
     ];
@@ -189,14 +196,15 @@ async function listPublicGoogleDriveFolder(folderId: string, refreshKey = ""): P
       const id = getFileIdFromHref(href);
       const isFolder = href.includes("/drive/folders/");
       const isImage = href.includes("/file/d/") && /\.(avif|gif|jpe?g|png|webp|bmp|tiff?)$/i.test(name);
-      if (!id || (!isFolder && !isImage)) return null;
+      const isVideo = href.includes("/file/d/") && /\.(mp4|m4v|mov|webm|ogg)$/i.test(name);
+      if (!id || (!isFolder && !isImage && !isVideo)) return null;
 
       return {
         id,
         name,
-        mimeType: isFolder ? "application/vnd.google-apps.folder" : "image/*",
-        type: isFolder ? "folder" : "image",
-        url: href || null,
+        mimeType: isFolder ? "application/vnd.google-apps.folder" : isVideo ? "video/*" : "image/*",
+        type: isFolder ? "folder" : isVideo ? "video" : "image",
+        url: isVideo ? googleDriveVideoUrl(id) : href || null,
         thumbnailUrl: isFolder ? null : googleDriveImageUrl(id),
       } satisfies DriveBrowserItem;
     })

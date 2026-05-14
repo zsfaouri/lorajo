@@ -1,4 +1,4 @@
-import { CalendarDays, ContactRound, FileText, FolderPlus, GalleryHorizontalEnd, Images, ShieldCheck, Users } from "lucide-react";
+import { Archive, CalendarDays, ContactRound, FileText, FolderPlus, GalleryHorizontalEnd, Images, ShieldCheck, Users } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getGalleryCollections, getMembers, getPagesForAdmin } from "@/lib/cms-data";
@@ -28,6 +28,18 @@ const workflows = [
     description: "Open the Famous Figures Drive folder tab and edit image text shown on the website.",
     href: "/admin/media?folder=famous-figures",
     icon: Users,
+  },
+  {
+    title: "Neighborhood Archive",
+    description: "Edit the public archive page and connect the searchable names library to Google Drive media.",
+    href: "/admin/neighborhood-archive",
+    icon: Archive,
+  },
+  {
+    title: "Neighborhood Archive Media",
+    description: "Open the Neighborhood Archive Drive folder tab for pictures and videos used by the public archive.",
+    href: "/admin/media?folder=neighborhood-archive",
+    icon: Archive,
   },
   {
     title: "Who We Are",

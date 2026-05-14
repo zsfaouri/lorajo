@@ -129,16 +129,22 @@ The public page uses the animated founding members design. Admin member records 
 
 ### 3.7 Photo Gallery
 
-Path: `/admin/gallery`
+Path: `/admin/media`
 
-Use this section to manage albums.
+Use this section to manage the Google Drive-backed photo gallery folders:
+
+- `Famous Figures`
+- `Landmarks`
+- `Historical Pics`
 
 Workflow:
 
-1. Choose an album from the left list.
-2. Upload images directly into the selected album, or choose images from the existing media list.
-3. Edit title/text for each image when needed.
-4. Save changes.
+1. Open `Image Cloud`, `Famous Figures`, `Landmarks`, or `Historical Pics` from the admin sidebar.
+2. Click `Sync Google Drive` to pull the latest Drive folders and files.
+3. Choose the folder tab from the left list.
+4. Choose an existing Drive image from the picker.
+5. Edit title/text for each image when needed.
+6. Save changes.
 
 For the `Famous Figures` album:
 
@@ -146,20 +152,21 @@ For the `Famous Figures` album:
 - Each image has its own `Text for this famous figure`.
 - Click `Save text` after editing each figure.
 
-The public Famous Figures experience uses each image's own saved text.
+The public Photo Gallery page uses the same featured project grid for `Famous Figures`, `Landmarks`, and `Historical Pics`. Public display uses each image's saved title and text.
 
 ### 3.8 Media Cloud
 
 Path: `/admin/media`
 
-Use Media Cloud to upload images once and reuse them across the site.
+Use Media Cloud to sync Google Drive images and reuse them across the site.
 
 Workflow:
 
-1. Select one or more image files.
-2. Add alt text if needed.
-3. Add a category, for example `Famous Figures`, `Events`, `Archive`, or `Who We Are`.
-4. Click Upload.
+1. Upload or organize files in the connected Google Drive folders.
+2. Open `/admin/media`.
+3. Click `Sync Google Drive`.
+4. Select a folder tab such as `Famous Figures`, `Landmarks`, or `Historical Pics`.
+5. Add or edit images for the selected folder.
 
 Supported upload types:
 
@@ -393,10 +400,12 @@ Gallery manager:
 src/components/admin/gallery-album-manager.tsx
 ```
 
-Media cloud:
+Media cloud / gallery manager:
 
 ```text
-src/components/admin/media-library-manager.tsx
+src/app/admin/media/page.tsx
+src/components/admin/gallery-album-manager.tsx
+src/components/admin/drive-image-picker.tsx
 ```
 
 Founding members manager:
@@ -430,11 +439,11 @@ src/components/ui/event-card.tsx
 src/components/sections/event-list-section.tsx
 ```
 
-Famous Figures/gallery public design:
+Photo Gallery public design:
 
 ```text
-src/components/sections/staggered-photo-gallery-section.tsx
-src/components/sections/sphere-image-grid.tsx
+src/components/sections/gallery-collections-section.tsx
+src/components/sections/featured-photo-gallery.tsx
 ```
 
 CMS data mapping:
@@ -723,7 +732,7 @@ src/app/api/admin/media/route.ts
 Famous Figures is controlled through:
 
 ```text
-/admin/gallery
+/admin/media?folder=famous-figures
 ```
 
 Select the `Famous Figures` album.
@@ -738,6 +747,21 @@ Public display uses:
 
 - `GalleryImage.alt` as the title/name.
 - `GalleryImage.caption` as the text.
+
+### Landmarks And Historical Pics
+
+Landmarks and Historical Pics are controlled through:
+
+```text
+/admin/media?folder=landmarks
+/admin/media?folder=historical-photos
+```
+
+Public display uses:
+
+- The folder slug as the filter tab.
+- `GalleryImage.alt` and `GalleryImage.caption` for card overlay text.
+- Google Drive folder sync as the source of new media files.
 
 ### Founding Members
 

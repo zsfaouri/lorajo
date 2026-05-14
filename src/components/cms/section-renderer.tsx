@@ -8,13 +8,14 @@ import { HeritageStorySection } from "@/components/sections/heritage-story-secti
 import { HeroSection } from "@/components/sections/hero-section";
 import { ImageCarouselSection } from "@/components/sections/image-carousel-section";
 import { MemberGridSection } from "@/components/sections/member-grid-section";
+import { NeighborhoodArchiveSection } from "@/components/sections/neighborhood-archive-section";
 import { NewsletterSection } from "@/components/sections/newsletter-section";
 import { RichTextSection } from "@/components/sections/rich-text-section";
 import { SectionFrame } from "@/components/sections/section-frame";
 import { TextMarqueeSection } from "@/components/sections/text-marquee-section";
 import { VideoSection } from "@/components/sections/video-section";
 import { VideoScrollHeroSection } from "@/components/sections/video-scroll-hero-section";
-import { getArticles, getEvents, getGalleryCollections, getMembers } from "@/lib/cms-data";
+import { getArticles, getEvents, getGalleryCollections, getMembers, getNeighborhoodArchiveItems } from "@/lib/cms-data";
 import type { CmsSection, LocaleCode } from "@/types/cms";
 
 export async function SectionRenderer({ section, locale }: { section: CmsSection; locale: LocaleCode }) {
@@ -39,6 +40,10 @@ export async function SectionRenderer({ section, locale }: { section: CmsSection
     case "gallery_masonry": {
       const collections = await getGalleryCollections(locale);
       return <GalleryCollectionsSection section={section} collections={collections} />;
+    }
+    case "neighborhood_archive": {
+      const items = await getNeighborhoodArchiveItems(locale);
+      return <NeighborhoodArchiveSection section={section} items={items} />;
     }
     case "member_grid": {
       const members = await getMembers(locale);

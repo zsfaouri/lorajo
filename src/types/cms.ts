@@ -79,6 +79,16 @@ export type GalleryCollectionDto = {
   images: CmsImage[];
 };
 
+export type NeighborhoodArchiveItem = {
+  id: string;
+  name: string;
+  text?: string | null;
+  mediaType: "IMAGE" | "VIDEO";
+  src: string;
+  thumbnail?: string | null;
+  folder?: string | null;
+};
+
 export type EventDto = {
   id: string;
   title: string;

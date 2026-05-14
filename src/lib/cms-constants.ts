@@ -22,6 +22,7 @@ export const sectionTypes = [
   "heritage_story",
   "text_marquee",
   "image_carousel",
+  "neighborhood_archive",
 ] as const;
 
 export const sectionVariants = {

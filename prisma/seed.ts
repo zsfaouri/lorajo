@@ -175,6 +175,7 @@ const sectionTypes = [
   "heritage_story",
   "text_marquee",
   "image_carousel",
+  "neighborhood_archive",
 ];
 
 const variants = [
@@ -343,6 +344,7 @@ async function upsertNavigationAndFooter() {
     ["WHAT WE DO", "/en/what-we-do", Locale.EN, 2],
     ["FOUNDING MEMBERS", "/en/founding-members", Locale.EN, 3],
     ["PHOTO GALLERY", "/en/photo-gallery", Locale.EN, 4],
+    ["NEIGHBORHOOD ARCHIVE", "/en/neighborhood-archive", Locale.EN, 5],
     ["من نحن", "/ar/who-we-are", Locale.AR, 1],
     ["ماذا نفعل", "/ar/what-we-do", Locale.AR, 2],
     ["الأعضاء المؤسسون", "/ar/founding-members", Locale.AR, 3],
@@ -443,6 +445,13 @@ async function upsertGallery(mediaIds: Map<string, string>) {
       description: "Residents and public figures connected to Luweibdeh history.",
       mediaKeys: ["wael-hamza-smadi", "reem-farkouh", "saleem-quna"],
       sortOrder: 3,
+    },
+    {
+      slug: "neighborhood-archive",
+      title: "NEIGHBORHOOD ARCHIVE",
+      description: "Searchable names, pictures, videos, and neighborhood memory records.",
+      mediaKeys: ["square-de-paris", "dar-al-anda", "blue-house"],
+      sortOrder: 4,
     },
   ];
 
@@ -719,6 +728,24 @@ async function upsertPages() {
           subtitle: "Historical photos, landmarks, and public memory from Jabal Al-Luweibdeh.",
           collections: ["HISTORICAL PHOTOS", "LANDMARKS", "FAMOUS FIGURES"],
         },
+      },
+    ],
+  });
+
+  await createPageWithSections({
+    locale: Locale.EN,
+    slug: "neighborhood-archive",
+    title: "Neighborhood Archive",
+    seoDescription: "A searchable library of neighborhood names, photos, videos, and memory fragments from Jabal Al-Luweibdeh.",
+    sections: [
+      {
+        type: "neighborhood_archive",
+        variant: "searchable_library",
+        content: {
+          title: "Neighborhood Archive",
+          subtitle: "Search names, photographs, videos, and memory fragments connected to Jabal Al-Luweibdeh.",
+        },
+        background: { token: "softWhite" },
       },
     ],
   });
