@@ -37,6 +37,7 @@ type PageMeta = {
   seoTitle?: string | null;
   seoDescription?: string | null;
   seoImage?: string | null;
+  driveFolderId?: string | null;
 };
 
 type EditableSection = Omit<Section, "content" | "settings" | "spacing" | "background"> & {
@@ -201,6 +202,7 @@ export function PageSectionEditor({
   const [pageDraft, setPageDraft] = useState<PageMeta>(
     page ?? { id: pageId, locale: "EN", title: pageTitle, slug: "", status: "DRAFT", seoTitle: "", seoDescription: "", seoImage: "" },
   );
+  const folderId = pageDraft.driveFolderId ?? undefined;
   const activeSection = sectionList.find((section) => section.id === activeId) ?? sectionList[0];
 
   function updateSection(sectionId: string, updater: (section: EditableSection) => EditableSection) {
@@ -346,6 +348,7 @@ export function PageSectionEditor({
             <DriveImagePicker
               assets={mediaAssets}
               selectedUrls={pageDraft.seoImage ? [pageDraft.seoImage] : []}
+              folderId={folderId}
               compact
               title="SEO social image"
               description="Used when this page is shared on Google, Facebook, WhatsApp, and social platforms."
@@ -425,6 +428,7 @@ export function PageSectionEditor({
       <SectionForm
         section={activeSection}
         assets={mediaAssets}
+        folderId={folderId}
         status={status[activeSection.id]}
         onChange={(updater) => updateSection(activeSection.id, updater)}
         onSave={() => save(activeSection)}
@@ -437,6 +441,7 @@ export function PageSectionEditor({
 function SectionForm({
   section,
   assets,
+  folderId,
   status,
   onChange,
   onSave,
@@ -444,6 +449,7 @@ function SectionForm({
 }: {
   section: EditableSection;
   assets: MediaAsset[];
+  folderId?: string;
   status?: string;
   onChange: (updater: (section: EditableSection) => EditableSection) => void;
   onSave: () => void;
@@ -559,6 +565,7 @@ function SectionForm({
               description="Choose images from Google Drive. The first image is also used as the fallback image."
               images={heroFrames}
               assets={assets}
+              folderId={folderId}
               onChange={(paths) => {
                 setSettings("heroScrubFrames", paths);
                 setContent("image", paths[0] ?? "");
@@ -577,6 +584,7 @@ function SectionForm({
               description="Choose one image for this section."
               images={stringValue(section.content, "image") ? [stringValue(section.content, "image")] : []}
               assets={assets}
+              folderId={folderId}
               maxImages={1}
               onChange={(paths) => setContent("image", paths[0] ?? "")}
             />
@@ -601,6 +609,7 @@ function SectionForm({
               description="Choose a Drive image to use as the poster or fallback visual."
               images={stringValue(section.content, "image") ? [stringValue(section.content, "image")] : []}
               assets={assets}
+              folderId={folderId}
               maxImages={1}
               onChange={(paths) => setContent("image", paths[0] ?? "")}
             />
@@ -652,6 +661,7 @@ function SectionForm({
                 title="Grid images"
                 images={whatWeDoImages}
                 assets={assets}
+                folderId={folderId}
                 onChange={(images) => setContent("images", images)}
               />
             ) : null}
@@ -663,6 +673,7 @@ function SectionForm({
             title="Gallery images"
             images={contentItems}
             assets={assets}
+            folderId={folderId}
             onChange={(images) => setContent("items", images)}
           />
         ) : null}
@@ -736,6 +747,7 @@ function ImageListEditor({
   description,
   images,
   assets,
+  folderId,
   maxImages,
   onChange,
 }: {
@@ -743,6 +755,7 @@ function ImageListEditor({
   description: string;
   images: string[];
   assets: MediaAsset[];
+  folderId?: string;
   maxImages?: number;
   onChange: (paths: string[]) => void;
 }) {
@@ -753,7 +766,7 @@ function ImageListEditor({
         <p className="mt-1 text-sm text-white/45">{description}</p>
       </div>
       <SelectedImages images={images} onChange={onChange} />
-      <MediaPicker assets={assets} selected={images} maxImages={maxImages} onChange={onChange} />
+      <MediaPicker assets={assets} folderId={folderId} selected={images} maxImages={maxImages} onChange={onChange} />
     </div>
   );
 }
@@ -762,11 +775,13 @@ function ImageObjectListEditor({
   title,
   images,
   assets,
+  folderId,
   onChange,
 }: {
   title: string;
   images: Array<{ src: string; alt: string; caption: string }>;
   assets: MediaAsset[];
+  folderId?: string;
   onChange: (images: Array<{ src: string; alt: string; caption: string }>) => void;
 }) {
   const paths = images.map((image) => image.src);
@@ -776,6 +791,7 @@ function ImageObjectListEditor({
       description="Pick images visually. Captions can be edited after selecting."
       images={paths}
       assets={assets}
+      folderId={folderId}
       onChange={(nextPaths) => {
         const nextImages = nextPaths.map((src) => {
           const existing = images.find((image) => image.src === src);
@@ -816,11 +832,13 @@ function SelectedImages({ images, onChange }: { images: string[]; onChange: (pat
 
 function MediaPicker({
   assets,
+  folderId,
   selected,
   maxImages,
   onChange,
 }: {
   assets: MediaAsset[];
+  folderId?: string;
   selected: string[];
   maxImages?: number;
   onChange: (paths: string[]) => void;
@@ -829,6 +847,7 @@ function MediaPicker({
     <DriveImagePicker
       assets={assets}
       selectedUrls={selected}
+      folderId={folderId}
       title="Choose from Google Drive"
       description="All images come from the Drive folders synced in Image Cloud."
       onPick={(asset) => {

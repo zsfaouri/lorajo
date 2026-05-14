@@ -112,9 +112,11 @@ function SmartImage({
 export function MemberManager({
   initialMembers,
   mediaAssets,
+  folderId,
 }: {
   initialMembers: Member[];
   mediaAssets: MediaAsset[];
+  folderId?: string;
 }) {
   const [members, setMembers] = useState(initialMembers);
   const [selectedId, setSelectedId] = useState(initialMembers[0]?.id ?? "new");
@@ -286,8 +288,7 @@ export function MemberManager({
               <DriveImagePicker
                 assets={mediaAssets}
                 selectedIds={activeDraft.mediaAssetId ? [activeDraft.mediaAssetId] : []}
-                category="founding-members"
-                lockCategory
+                folderId={folderId}
                 compact
                 title="Choose from Drive founders folder"
                 description="Only pictures inside the Google Drive founders folder appear here."

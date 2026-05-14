@@ -1,6 +1,7 @@
 import { HeroPicsManager } from "@/components/admin/hero-pics-manager";
 import { requireAdmin } from "@/lib/admin-auth";
 import { listAdminMedia } from "@/lib/admin-data";
+import { DRIVE_FOLDER_REGISTRY } from "@/lib/drive-folders";
 import { fallbackPages } from "@/lib/fallback-data";
 import { getPrisma } from "@/lib/prisma";
 import type { LocaleCode } from "@/types/cms";
@@ -35,7 +36,7 @@ function fallbackHeroSections() {
 export default async function AdminHeroPicsPage() {
   await requireAdmin();
   const prisma = getPrisma();
-  if (!prisma) return <HeroPicsManager initialSections={fallbackHeroSections()} mediaAssets={[]} />;
+  if (!prisma) return <HeroPicsManager initialSections={fallbackHeroSections()} mediaAssets={[]} folderId={DRIVE_FOLDER_REGISTRY["hero-pics"]} />;
 
   const [sections, mediaAssets] = await Promise.all([
     prisma.pageSection.findMany({
@@ -64,6 +65,7 @@ export default async function AdminHeroPicsPage() {
     <HeroPicsManager
       initialSections={mappedSections.length > 0 ? mappedSections : fallbackHeroSections()}
       mediaAssets={mediaAssets}
+      folderId={DRIVE_FOLDER_REGISTRY["hero-pics"]}
     />
   );
 }

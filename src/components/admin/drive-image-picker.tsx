@@ -38,8 +38,17 @@ export function isDriveAsset(asset: DriveMediaAsset) {
   return asset.source?.toLowerCase() === "google drive" || Boolean(metadataValue(asset, "driveFolderId"));
 }
 
-async function syncGoogleDrive() {
-  const response = await fetch("/api/admin/gallery/sync-drive", { method: "POST", cache: "no-store" });
+async function syncGoogleDrive(folderId?: string) {
+  const response = await fetch("/api/admin/gallery/sync-drive", {
+    method: "POST",
+    cache: "no-store",
+    ...(folderId
+      ? {
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ folderId }),
+        }
+      : {}),
+  });
   const json = await response.json();
   if (!response.ok) throw new Error(json.error ?? "Drive sync failed.");
   return json as { folders?: number; images?: number };
@@ -53,6 +62,7 @@ export function DriveImagePicker({
   title = "Choose from Google Drive",
   description = "Upload files in Google Drive, then sync here.",
   category,
+  folderId,
   lockCategory = false,
   emptyMessage,
   compact = false,
@@ -64,6 +74,7 @@ export function DriveImagePicker({
   title?: string;
   description?: string;
   category?: string | string[];
+  folderId?: string;
   lockCategory?: boolean;
   emptyMessage?: string;
   compact?: boolean;
@@ -77,15 +88,20 @@ export function DriveImagePicker({
   const [status, setStatus] = useState("");
 
   const driveAssets = useMemo(() => assets.filter(isDriveAsset), [assets]);
+  const folderScopedAssets = useMemo(() => {
+    if (!folderId) return driveAssets;
+    return driveAssets.filter((asset) => metadataValue(asset, "driveFolderId") === folderId);
+  }, [driveAssets, folderId]);
+
   const categoryOptions = useMemo(() => {
     const map = new Map<string, string>();
-    for (const asset of driveAssets) {
+    for (const asset of folderScopedAssets) {
       const slug = driveAssetCategorySlug(asset);
       if (!slug) continue;
       map.set(slug, driveAssetCategoryLabel(asset));
     }
     return [...map.entries()].sort((a, b) => a[1].localeCompare(b[1]));
-  }, [driveAssets]);
+  }, [folderScopedAssets]);
 
   const allowedCategories = useMemo(() => {
     if (!category) return null;
@@ -95,19 +111,23 @@ export function DriveImagePicker({
   const filteredAssets = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     const normalizedActive = canonicalGallerySlug(activeCategory);
-    return driveAssets.filter((asset) => {
+    return folderScopedAssets.filter((asset) => {
+      if (folderId) {
+        if (!normalizedQuery) return true;
+        return `${asset.alt ?? ""} ${asset.caption ?? ""} ${driveAssetCategoryLabel(asset)}`.toLowerCase().includes(normalizedQuery);
+      }
       const assetCategory = driveAssetCategorySlug(asset);
       if (allowedCategories && !allowedCategories.has(assetCategory)) return false;
       if (!lockCategory && normalizedActive !== "all" && assetCategory !== normalizedActive) return false;
       if (!normalizedQuery) return true;
       return `${asset.alt ?? ""} ${asset.caption ?? ""} ${driveAssetCategoryLabel(asset)}`.toLowerCase().includes(normalizedQuery);
     });
-  }, [activeCategory, allowedCategories, driveAssets, lockCategory, query]);
+  }, [activeCategory, allowedCategories, folderId, folderScopedAssets, lockCategory, query]);
 
   async function handleSync() {
     setStatus("Reading Google Drive...");
     try {
-      const result = await syncGoogleDrive();
+      const result = await syncGoogleDrive(folderId);
       setStatus(`Synced ${result.folders ?? 0} folders / ${result.images ?? 0} images.`);
       router.refresh();
     } catch (caught) {
@@ -130,7 +150,7 @@ export function DriveImagePicker({
 
       <div className="grid gap-2 md:grid-cols-[1fr_180px]">
         <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search Drive pictures" />
-        {!lockCategory ? (
+        {!lockCategory && !folderId ? (
           <select
             value={activeCategory}
             onChange={(event) => setActiveCategory(event.target.value)}

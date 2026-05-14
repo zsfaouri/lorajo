@@ -1,6 +1,8 @@
 import { PublishState } from "@prisma/client";
 
 import { auditPayload, error, ok, parseJson, requireAdminApi, requirePrisma } from "@/lib/api-utils";
+import { DRIVE_PAGES_FOLDER_ID } from "@/lib/drive-folders";
+import { createGoogleDriveFolder } from "@/lib/google-drive";
 import { pageSchema } from "@/lib/validations";
 
 export async function GET() {
@@ -23,13 +25,18 @@ export async function POST(request: Request) {
   const { data, response } = await parseJson(request, pageSchema);
   if (response) return response;
 
-  const page = await prisma.page.create({
+  let page = await prisma.page.create({
     data: {
       ...data,
       status: data.status as PublishState,
       publishedAt: data.status === "PUBLISHED" ? new Date() : null,
     },
   });
+
+  const folder = await createGoogleDriveFolder(page.title, DRIVE_PAGES_FOLDER_ID).catch(() => null);
+  if (folder) {
+    page = await prisma.page.update({ where: { id: page.id }, data: { driveFolderId: folder.id } });
+  }
 
   await prisma.auditLog.create({
     data: { userId: session.user?.id, action: "create", entity: "Page", entityId: page.id, after: auditPayload(page) },

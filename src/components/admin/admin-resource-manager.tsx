@@ -209,6 +209,7 @@ export function AdminResourceManager({
 
   const selectedItem = items.find((item) => item.id === selectedId) ?? null;
   const mode = selectedItem ? "edit" : "create";
+  const selectedDriveFolderId = typeof selectedItem?.driveFolderId === "string" ? selectedItem.driveFolderId : undefined;
 
   function beginCreate() {
     setSelectedId("new");
@@ -330,6 +331,7 @@ export function AdminResourceManager({
           compact
           title={field.label}
           description="Choose from the synced Google Drive folders. Local upload and pasted files are not used here."
+          folderId={selectedDriveFolderId}
           onPick={(asset) => {
             setTitleAndMaybeSlug(field.name, asset.url);
             if (!values.imageAlt) setTitleAndMaybeSlug("imageAlt", asset.alt ?? asset.caption ?? "");

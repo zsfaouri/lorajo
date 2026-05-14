@@ -48,9 +48,11 @@ function SmartImage({ src, alt }: { src: string; alt: string }) {
 export function HeroPicsManager({
   initialSections,
   mediaAssets,
+  folderId,
 }: {
   initialSections: HeroSection[];
   mediaAssets: DriveMediaAsset[];
+  folderId?: string;
 }) {
   const [sections, setSections] = useState(initialSections);
   const [status, setStatus] = useState<Record<string, string>>({});
@@ -156,8 +158,7 @@ export function HeroPicsManager({
                 <DriveImagePicker
                   assets={mediaAssets}
                   selectedUrls={images}
-                  category="hero-pics"
-                  lockCategory
+                  folderId={folderId}
                   title="Choose from Drive hero folder"
                   description="Only pictures inside the Google Drive hero folder appear here."
                   emptyMessage="The Drive hero folder has no synced pictures. Add pictures to Google Drive, then click Sync Drive."

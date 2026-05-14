@@ -35,6 +35,7 @@ type GalleryCollection = {
   id: string;
   title: string;
   slug: string;
+  driveFolderId?: string | null;
   locale: string;
   description?: string | null;
   sortOrder: number;
@@ -353,8 +354,7 @@ export function GalleryAlbumManager({ initialCollections, mediaAssets = [] }: { 
                   }
                   title={activeIsFamousFigures ? "Profile picture" : "Gallery picture"}
                   description={`Choose from synced Google Drive images in ${active.title}.`}
-                  category={active.slug}
-                  lockCategory
+                  folderId={active.driveFolderId ?? undefined}
                   compact
                 />
 

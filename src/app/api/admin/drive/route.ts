@@ -1,5 +1,6 @@
 import { error, ok, requireAdminApi } from "@/lib/api-utils";
-import { createGoogleDriveFolder, DEFAULT_GOOGLE_DRIVE_FOLDER_ID, listGoogleDriveFolder } from "@/lib/google-drive";
+import { DRIVE_ROOT_FOLDER_ID } from "@/lib/drive-folders";
+import { createGoogleDriveFolder, listGoogleDriveFolder } from "@/lib/google-drive";
 
 export const dynamic = "force-dynamic";
 
@@ -8,13 +9,13 @@ export async function GET(request: Request) {
   if (!session) return error("Unauthorized", 401);
 
   const { searchParams } = new URL(request.url);
-  const folderId = searchParams.get("folderId") || DEFAULT_GOOGLE_DRIVE_FOLDER_ID;
+  const folderId = searchParams.get("folderId") || process.env.GOOGLE_DRIVE_FOLDER_ID || DRIVE_ROOT_FOLDER_ID;
   const refreshKey = searchParams.get("refresh") || "";
 
   try {
     return ok({
       folderId,
-      rootFolderId: DEFAULT_GOOGLE_DRIVE_FOLDER_ID,
+      rootFolderId: process.env.GOOGLE_DRIVE_FOLDER_ID || DRIVE_ROOT_FOLDER_ID,
       items: await listGoogleDriveFolder(folderId, refreshKey),
     });
   } catch (caught) {

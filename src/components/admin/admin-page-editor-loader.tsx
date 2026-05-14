@@ -84,6 +84,7 @@ export async function AdminPageEditorLoader({ lookup }: { lookup: PageLookup }) 
           seoTitle: page.seoTitle,
           seoDescription: page.seoDescription,
           seoImage: page.seoImage,
+          driveFolderId: page.driveFolderId,
         }}
         sections={page.sections}
         mediaAssets={mediaAssets}

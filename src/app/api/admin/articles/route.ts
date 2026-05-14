@@ -1,6 +1,8 @@
 import { PublishState } from "@prisma/client";
 
 import { error, jsonInput, ok, parseJson, requireAdminApi, requirePrisma } from "@/lib/api-utils";
+import { DRIVE_ANNOUNCEMENTS_FOLDER_ID } from "@/lib/drive-folders";
+import { createGoogleDriveFolder } from "@/lib/google-drive";
 import { contentEntrySchema } from "@/lib/validations";
 
 export async function GET() {
@@ -19,7 +21,7 @@ export async function POST(request: Request) {
   const { data, response } = await parseJson(request, contentEntrySchema);
   if (response) return response;
 
-  const article = await prisma.article.create({
+  let article = await prisma.article.create({
     data: {
       locale: data.locale,
       title: data.title,
@@ -30,6 +32,10 @@ export async function POST(request: Request) {
       publishedAt: data.status === "PUBLISHED" ? new Date() : null,
     },
   });
+  const folder = await createGoogleDriveFolder(article.title, DRIVE_ANNOUNCEMENTS_FOLDER_ID).catch(() => null);
+  if (folder) {
+    article = await prisma.article.update({ where: { id: article.id }, data: { driveFolderId: folder.id } });
+  }
   await prisma.auditLog.create({ data: { userId: session.user?.id, action: "create", entity: "Article", entityId: article.id } });
   return ok(article, { status: 201 });
 }

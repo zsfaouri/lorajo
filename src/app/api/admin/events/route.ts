@@ -2,6 +2,8 @@ import { PublishState } from "@prisma/client";
 import { z } from "zod";
 
 import { error, jsonInput, ok, parseJson, requireAdminApi, requirePrisma } from "@/lib/api-utils";
+import { DRIVE_EVENTS_FOLDER_ID } from "@/lib/drive-folders";
+import { createGoogleDriveFolder } from "@/lib/google-drive";
 import { contentEntrySchema } from "@/lib/validations";
 
 const eventSchema = contentEntrySchema.extend({
@@ -32,7 +34,7 @@ export async function POST(request: Request) {
   if (response) return response;
 
   const { imageUrl, imageAlt, videoUrl, invitationUrl, actionLabel, content, ...eventData } = data;
-  const event = await prisma.event.create({
+  let event = await prisma.event.create({
     data: {
       ...eventData,
       content: jsonInput({
@@ -48,6 +50,10 @@ export async function POST(request: Request) {
       endsAt: eventData.endsAt ? new Date(eventData.endsAt) : null,
     },
   });
+  const folder = await createGoogleDriveFolder(event.title, DRIVE_EVENTS_FOLDER_ID).catch(() => null);
+  if (folder) {
+    event = await prisma.event.update({ where: { id: event.id }, data: { driveFolderId: folder.id } });
+  }
   await prisma.auditLog.create({ data: { userId: session.user?.id, action: "create", entity: "Event", entityId: event.id } });
   return ok(event, { status: 201 });
 }

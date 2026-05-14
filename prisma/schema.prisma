@@ -122,6 +122,7 @@ model Page {
   seoTitle       String?
   seoDescription String?
   seoImage       String?
+  driveFolderId  String?
   status         PublishState  @default(DRAFT)
   publishedAt    DateTime?
   sections       PageSection[]
@@ -219,6 +220,7 @@ model Event {
   startsAt    DateTime?
   endsAt      DateTime?
   location    String?
+  driveFolderId String?
   status      PublishState @default(DRAFT)
   mediaAssetId String?
   mediaAsset   MediaAsset? @relation(fields: [mediaAssetId], references: [id], onDelete: SetNull)
@@ -236,6 +238,7 @@ model Article {
   excerpt     String?
   content     Json
   author      String?
+  driveFolderId String?
   status      PublishState @default(DRAFT)
   publishedAt DateTime?
   mediaAssetId String?
@@ -270,6 +273,7 @@ model GalleryCollection {
   title       String
   slug        String
   description String?
+  driveFolderId String?
   sortOrder   Int
   status      PublishState   @default(PUBLISHED)
   images      GalleryImage[]
