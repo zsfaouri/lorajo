@@ -243,8 +243,13 @@ export async function getArticles(locale: LocaleCode): Promise<ArticleDto[]> {
 export async function getGalleryCollections(locale: LocaleCode): Promise<GalleryCollectionDto[]> {
   noStore();
   const prisma = getPrisma();
-  const driveCollections = await getDriveGalleryCollections().catch(() => []);
-  if (!prisma) return driveCollections.length > 0 ? driveCollections : fallbackGallery;
+
+  async function driveFallback() {
+    const driveCollections = await getDriveGalleryCollections().catch(() => []);
+    return driveCollections.length > 0 ? driveCollections : fallbackGallery;
+  }
+
+  if (!prisma) return driveFallback();
 
   try {
     const collections = await prisma.galleryCollection.findMany({
@@ -271,35 +276,10 @@ export async function getGalleryCollections(locale: LocaleCode): Promise<Gallery
       })),
     }));
 
-    if (driveCollections.length > 0) {
-      const mergedCollections = driveCollections.map((driveCollection) => {
-        const databaseCollection = databaseCollections.find((collection) => collection.slug === driveCollection.slug);
-        if (!databaseCollection) return { ...driveCollection, title: galleryTitleForSlug(driveCollection.slug, driveCollection.title) };
-
-        return {
-          ...driveCollection,
-          title: databaseCollection.title || galleryTitleForSlug(driveCollection.slug, driveCollection.title),
-          description: databaseCollection.description ?? driveCollection.description,
-          images:
-            driveCollection.images.length > 0
-              ? driveCollection.images.map((driveImage) => {
-                  const databaseImage = databaseCollection.images.find((image) => image.src === driveImage.src);
-                  return databaseImage ? { ...driveImage, alt: databaseImage.alt, caption: databaseImage.caption } : driveImage;
-                })
-              : databaseCollection.images,
-        };
-      });
-
-      const driveSlugs = new Set(mergedCollections.map((collection) => collection.slug));
-      return [
-        ...mergedCollections,
-        ...databaseCollections.filter((collection) => !driveSlugs.has(collection.slug)),
-      ].sort((a, b) => a.sortOrder - b.sortOrder);
-    }
-
-    return databaseCollections;
+    if (databaseCollections.length > 0) return databaseCollections;
+    return driveFallback();
   } catch {
-    return driveCollections.length > 0 ? driveCollections : fallbackGallery;
+    return fallbackGallery;
   }
 }
 

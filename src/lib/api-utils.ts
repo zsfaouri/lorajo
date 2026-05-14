@@ -5,6 +5,10 @@ import { ZodError } from "zod";
 import { auth } from "@/auth";
 import { getPrisma } from "@/lib/prisma";
 
+function isAdminRole(role: string | null | undefined) {
+  return role?.toLowerCase() === "admin";
+}
+
 export function ok<T>(data: T, init?: ResponseInit) {
   const response = NextResponse.json(data, init);
   response.headers.set("Cache-Control", "no-store, no-cache, max-age=0, must-revalidate");
@@ -20,6 +24,7 @@ export function error(message: string, status = 400) {
 export async function requireAdminApi() {
   const session = await auth();
   if (!session?.user) return null;
+  if (!isAdminRole(session.user.role)) return null;
   return session;
 }
 
