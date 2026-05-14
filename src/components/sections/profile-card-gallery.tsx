@@ -35,7 +35,7 @@ export function ProfileCardGallery({ images }: { images: CmsImage[] }) {
     <section className="w-full py-12">
       <div className="mx-auto max-w-3xl px-4 text-center">
         <h2 className="text-3xl font-semibold text-black">Famous Figures</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-500">
+        <p className="mt-2 text-sm leading-6 text-black/55">
           A visual collection of people connected to Luweibdeh memory, culture, and public life.
         </p>
       </div>
@@ -58,7 +58,7 @@ export function ProfileCardGallery({ images }: { images: CmsImage[] }) {
               aria-label={profile.title}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className="h-full w-full object-cover object-center" src={profile.image} alt={profile.title} draggable={false} />
+              <img className="h-full w-full object-cover object-top" src={profile.image} alt={profile.title} draggable={false} />
               <div className="absolute inset-0 bg-gradient-to-t from-black/78 via-black/10 to-transparent opacity-80 transition-opacity duration-500 group-hover:opacity-100" />
               <div
                 className={cn(

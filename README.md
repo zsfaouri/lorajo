@@ -1,36 +1,127 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LORA Website CMS
 
-## Getting Started
+Production website and admin CMS for the Luweibdeh Old Residents Association.
 
-First, run the development server:
+The app is a Next.js 15 site with a PostgreSQL-backed CMS, Prisma data layer, Drive-backed media workflows, localized public pages, and an authenticated admin dashboard.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Stack
+
+- Next.js App Router
+- React 19
+- TypeScript
+- Tailwind CSS 4
+- Prisma with PostgreSQL
+- NextAuth
+- Google Drive media import/sync
+- Framer Motion, GSAP, and Lenis for public motion experiences
+
+## Local Setup
+
+Install dependencies:
+
+```powershell
+pnpm.cmd install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Copy environment values:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```powershell
+Copy-Item .env.example .env
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Start the local PostgreSQL instance if using the bundled local data folder:
 
-## Learn More
+```powershell
+pnpm.cmd pg:start
+```
 
-To learn more about Next.js, take a look at the following resources:
+Apply or create migrations as needed:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```powershell
+pnpm.cmd prisma:migrate
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Seed starter content:
 
-## Deploy on Vercel
+```powershell
+pnpm.cmd db:seed
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Run development server:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```powershell
+pnpm.cmd dev
+```
+
+Open:
+
+```text
+http://localhost:3000
+```
+
+## Main Scripts
+
+```powershell
+pnpm.cmd dev
+pnpm.cmd build
+pnpm.cmd start
+pnpm.cmd lint
+pnpm.cmd prisma:generate
+pnpm.cmd prisma:migrate
+pnpm.cmd prisma:studio
+pnpm.cmd db:seed
+pnpm.cmd media:import-drive
+```
+
+## Admin Areas
+
+- `/admin` dashboard
+- `/admin/pages` generic page editor
+- `/admin/who-we-are` direct Who We Are editor
+- `/admin/what-we-do` direct What We Do editor
+- `/admin/media` Drive-backed Image Cloud
+- `/admin/gallery` public gallery collections
+- `/admin/hero-pics` hero image manager
+- `/admin/members` founding members
+- `/admin/navigation` navigation editor
+- `/admin/footer` footer editor
+- `/admin/theme` theme tokens
+- `/admin/control` admin account and site controls
+
+## Public Routes
+
+- `/en`
+- `/en/who-we-are`
+- `/en/what-we-do`
+- `/en/founding-members`
+- `/en/photo-gallery`
+- `/en/neighborhood-archive`
+- Arabic equivalents under `/ar`
+
+## Current Important Behavior
+
+- Public pages are CMS-driven from `Page` and `PageSection`.
+- Direct admin routes for `who-we-are` and `what-we-do` load through `AdminPageEditorLoader`.
+- Missing expected CMS pages are seeded from fallback data instead of showing a 404.
+- Admin media syncs Google Drive before returning media/gallery data.
+- Public gallery tabs preserve `Famous Figures`, `Historical Pics`, and `Landmarks`.
+- The What We Do public image section uses the visible `rich_text / what_we_do_gallery` section.
+- Saving What We Do in `/admin/hero-pics` also syncs its images into that public What We Do section.
+
+## Validation
+
+Run before deployment:
+
+```powershell
+pnpm.cmd lint
+pnpm.cmd exec tsc --noEmit
+pnpm.cmd build
+```
+
+## Documentation
+
+Full project documentation is in:
+
+```text
+docs/PROJECT_DOCUMENTATION.md
+```

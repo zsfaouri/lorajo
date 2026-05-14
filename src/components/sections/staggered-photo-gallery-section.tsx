@@ -71,10 +71,11 @@ function ContainerAnimated({ transition, ...props }: HTMLMotionProps<"div">) {
   );
 }
 
-function GalleryImage({ src, alt, className, priority = false }: { src: string; alt: string; className?: string; priority?: boolean }) {
+function GalleryImage({ src, alt, className, priority = false, isPortrait = false }: { src: string; alt: string; className?: string; priority?: boolean; isPortrait?: boolean }) {
+  const positionClass = isPortrait ? "object-top" : "object-center";
   if (src.includes("supabase.co/storage/")) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={src} alt={alt} className={cn("h-full w-full object-cover", className)} loading="lazy" decoding="async" />;
+    return <img src={src} alt={alt} className={cn("h-full w-full object-cover", positionClass, className)} loading="lazy" decoding="async" />;
   }
 
   return (
@@ -82,7 +83,7 @@ function GalleryImage({ src, alt, className, priority = false }: { src: string; 
       src={src}
       alt={alt}
       fill
-      className={cn("object-cover", className)}
+      className={cn("object-cover", positionClass, className)}
       sizes="(min-width: 1024px) 720px, (min-width: 640px) 50vw, 100vw"
       priority={priority}
     />
@@ -93,7 +94,7 @@ function captionFor(image: CmsImage) {
   return image.caption ?? image.alt;
 }
 
-export function InteractiveBentoGallery({ images, title }: { images: CmsImage[]; title: string }) {
+export function InteractiveBentoGallery({ images, title, isPortrait = false }: { images: CmsImage[]; title: string; isPortrait?: boolean }) {
   const [items, setItems] = useState(images);
   const [selectedItem, setSelectedItem] = useState<CmsImage | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -149,15 +150,15 @@ export function InteractiveBentoGallery({ images, title }: { images: CmsImage[];
                 stiffness: 400,
                 damping: 30,
               }}
-              className="fixed inset-0 z-40 min-h-screen overflow-hidden rounded-none bg-white/45 backdrop-blur-lg sm:inset-x-6 sm:inset-y-8 sm:rounded-xl md:inset-x-12"
+              className="fixed inset-0 z-40 min-h-screen overflow-hidden rounded-none bg-[var(--color-soft-white)]/90 backdrop-blur-lg sm:inset-x-6 sm:inset-y-8 sm:rounded-xl md:inset-x-12"
             >
               <div className="flex h-full flex-col">
-                <div className="flex flex-1 items-center justify-center bg-gray-50/50 p-2 sm:p-3 md:p-4">
+                <div className="flex flex-1 items-center justify-center bg-black/[0.03] p-2 sm:p-3 md:p-4">
                   <AnimatePresence mode="wait">
                     <motion.button
                       type="button"
                       key={selectedItem.src}
-                      className="relative h-auto max-h-[70vh] w-full max-w-[95%] overflow-hidden rounded-lg bg-gray-900/20 shadow-md sm:max-w-[85%] md:max-w-3xl"
+                      className="relative h-auto max-h-[70vh] w-full max-w-[95%] overflow-hidden rounded-lg bg-black/10 shadow-md sm:max-w-[85%] md:max-w-3xl"
                       initial={{ y: 20, scale: 0.97 }}
                       animate={{
                         y: 0,
@@ -191,7 +192,7 @@ export function InteractiveBentoGallery({ images, title }: { images: CmsImage[];
 
               <motion.button
                 type="button"
-                className="absolute right-2 top-2 rounded-full bg-gray-200/80 p-2 text-gray-700 backdrop-blur-sm hover:bg-gray-300/80 sm:right-2.5 sm:top-2.5 md:right-3 md:top-3"
+                className="absolute right-2 top-2 rounded-full bg-black/10 p-2 text-black/70 backdrop-blur-sm hover:bg-black/20 sm:right-2.5 sm:top-2.5 md:right-3 md:top-3"
                 onClick={() => setSelectedItem(null)}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
@@ -215,7 +216,7 @@ export function InteractiveBentoGallery({ images, title }: { images: CmsImage[];
               }}
               className="fixed bottom-4 left-1/2 z-50 touch-none"
             >
-              <motion.div className="relative -translate-x-1/2 cursor-grab rounded-xl border border-blue-400/30 bg-sky-400/20 shadow-lg backdrop-blur-xl active:cursor-grabbing">
+              <motion.div className="relative -translate-x-1/2 cursor-grab rounded-xl border border-[var(--color-heritage-green)]/30 bg-[var(--color-heritage-green)]/12 shadow-lg backdrop-blur-xl active:cursor-grabbing">
                 <div className="flex items-center -space-x-2 px-3 py-2">
                   {items.map((item, index) => (
                     <motion.button
@@ -246,7 +247,7 @@ export function InteractiveBentoGallery({ images, title }: { images: CmsImage[];
                       }}
                       aria-label={`Show ${captionFor(item)}`}
                     >
-                      <GalleryImage src={item.src} alt={item.alt} className="object-cover" />
+                      <GalleryImage src={item.src} alt={item.alt} className="object-cover" isPortrait={isPortrait} />
                       <span className="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-white/20" />
                       {selectedItem.src === item.src && (
                         <motion.span
@@ -304,7 +305,7 @@ export function InteractiveBentoGallery({ images, title }: { images: CmsImage[];
                 onDragStart={() => setIsDragging(true)}
                 onDragEnd={(_, info) => reorderItem(index, info)}
               >
-                <GalleryImage src={item.src} alt={item.alt} className="object-cover" priority={index === 0} />
+                <GalleryImage src={item.src} alt={item.alt} className="object-cover" priority={index === 0} isPortrait={isPortrait} />
                 <motion.div
                   className="absolute inset-0 flex flex-col justify-end p-2 opacity-100 sm:p-3 md:p-4 lg:opacity-0"
                   whileHover={{ opacity: 1 }}
@@ -354,9 +355,9 @@ export function StaggeredPhotoGallerySection({
         <ContainerStagger className="mb-14 max-w-4xl">
           <ContainerAnimated>
             <p className="mb-5 text-xs uppercase tracking-[0.22em] text-[var(--color-heritage-green)]">LORA Archive</p>
-            <h1 className="text-[clamp(3.4rem,9vw,8rem)] font-[var(--font-heading-weight)] uppercase leading-[0.9]">
+            <h2 className="text-[clamp(3.4rem,9vw,8rem)] font-[var(--font-heading-weight)] uppercase leading-[0.9]">
               {title}
-            </h1>
+            </h2>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-black/62">{subtitle}</p>
           </ContainerAnimated>
         </ContainerStagger>
@@ -385,7 +386,7 @@ export function StaggeredPhotoGallerySection({
             <ProfileCardGallery images={images} />
           </ContainerAnimated>
         ) : isBentoCollection ? (
-          <InteractiveBentoGallery images={images} title={activeCollection?.title ?? ""} />
+          <InteractiveBentoGallery images={images} title={activeCollection?.title ?? ""} isPortrait={isFamousFigures} />
         ) : (
           <div className="rounded-md border border-dashed border-black/15 bg-white/50 p-8 text-sm text-black/50">
             No gallery images available.

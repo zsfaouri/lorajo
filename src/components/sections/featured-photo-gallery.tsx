@@ -51,10 +51,11 @@ function toGalleryItems(collections: GalleryCollectionDto[]): GalleryItem[] {
     );
 }
 
-function GalleryImage({ src, alt }: { src: string; alt: string }) {
+function GalleryImage({ src, alt, isPortrait = false }: { src: string; alt: string; isPortrait?: boolean }) {
+  const positionClass = isPortrait ? "object-top" : "object-center";
   if (src.includes("supabase.co/storage/") || src.includes("drive.google.com/") || src.includes("googleusercontent.com/")) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img className="h-full w-full object-cover" src={src} alt={alt} loading="lazy" decoding="async" />;
+    return <img className={`h-full w-full object-cover ${positionClass}`} src={src} alt={alt} loading="lazy" decoding="async" />;
   }
 
   return (
@@ -62,7 +63,7 @@ function GalleryImage({ src, alt }: { src: string; alt: string }) {
       src={src}
       alt={alt}
       fill
-      className="object-cover"
+      className={`object-cover ${positionClass}`}
       sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
     />
   );
@@ -122,7 +123,7 @@ export function FeaturedPhotoGallery({
                 index % 5 === 0 && "lg:row-span-2 lg:min-h-[520px]",
               )}
             >
-              <GalleryImage src={item.src} alt={item.alt} />
+              <GalleryImage src={item.src} alt={item.alt} isPortrait={item.filter === "famous-figures"} />
               <div
                 className={cn(
                   "responsive-container-block overlay absolute inset-0 bg-black/15 transition duration-500 group-hover:bg-black/58",

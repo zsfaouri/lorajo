@@ -66,19 +66,15 @@ function getImages(section: CmsSection) {
   const images = section.content.images;
   if (!Array.isArray(images)) return defaultImages;
 
-  const parsed = images
+  return images
     .filter(isRecord)
     .map((image) => ({
       src: typeof image.src === "string" ? image.src : "/lora/gallery/dar-al-anda-art-gallery.jpg",
       alt: typeof image.alt === "string" ? image.alt : "LORA What We Do image",
       caption: typeof image.caption === "string" ? image.caption : undefined,
-    }));
-
-  const mergedImages = [...parsed, ...defaultImages].filter(
-    (image, index, allImages) => allImages.findIndex((candidate) => candidate.src === image.src) === index,
-  );
-
-  return mergedImages.slice(0, 7);
+    }))
+    .filter((image, index, allImages) => allImages.findIndex((candidate) => candidate.src === image.src) === index)
+    .slice(0, 7);
 }
 
 function ContainerStagger({ transition, ...props }: HTMLMotionProps<"div">) {
@@ -132,7 +128,7 @@ function WhatWeDoGallerySection({ section }: { section: CmsSection }) {
         </ContainerStagger>
       </div>
 
-      <ZoomParallax images={images} />
+      {images.length > 0 ? <ZoomParallax images={images} /> : null}
 
       <div className="mx-auto max-w-7xl px-5 pb-28 sm:px-8 lg:px-10">
         <ContainerStagger className="grid gap-4 lg:grid-cols-2">

@@ -181,6 +181,7 @@ function ctaValue(value: unknown) {
 }
 
 function getSectionLabel(section: EditableSection) {
+  if (section.type === "rich_text" && section.variant === "what_we_do_gallery") return "Public What We Do hero";
   if (typeof section.content.title === "string") return section.content.title;
   if (typeof section.content.subtitle === "string") return section.content.subtitle;
   return `${section.type} / ${section.variant}`;
@@ -226,8 +227,9 @@ export function PageSectionEditor({
 }) {
   const router = useRouter();
   const initialSections = useMemo(() => sections.map(asEditableSection), [sections]);
+  const initialActiveId = initialSections.find((section) => section.isVisible)?.id ?? initialSections[0]?.id ?? "";
   const [sectionList, setSectionList] = useState(initialSections);
-  const [activeId, setActiveId] = useState(initialSections[0]?.id ?? "");
+  const [activeId, setActiveId] = useState(initialActiveId);
   const [status, setStatus] = useState<Record<string, string>>({});
   const [statusType, setStatusType] = useState<Record<string, NoticeType>>({});
   const [pageStatus, setPageStatus] = useState("");
@@ -516,6 +518,7 @@ export function PageSectionEditor({
                     <span className="flex items-center gap-2 text-sm font-medium">
                       {getSectionLabel(section)}
                       {dirty ? <span className="rounded-full bg-[var(--color-terracotta)] px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-white">Unsaved</span> : null}
+                      {!section.isVisible ? <span className="rounded-full bg-black/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-black/60">Hidden</span> : null}
                     </span>
                     <span className={cn("mt-1 block text-xs", section.id === activeSection.id ? "text-white/70" : "text-black/45")}>
                       {sectionTypeOptions.find(([value]) => value === section.type)?.[1] ?? section.type} / {sectionVariantOptions(section.type).find(([value]) => value === section.variant)?.[1] ?? section.variant}
@@ -826,7 +829,7 @@ function SectionForm({
             </Field>
             {section.variant === "what_we_do_gallery" ? (
               <ImageObjectListEditor
-                title="Grid images"
+                title="Public What We Do hero images"
                 images={whatWeDoImages}
                 assets={assets}
                 folderId={folderId}

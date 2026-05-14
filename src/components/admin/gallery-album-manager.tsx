@@ -49,8 +49,8 @@ type NewProfileForm = {
   caption: string;
 };
 
-function SmartImage({ src, alt }: { src: string; alt: string }) {
-  return <Image src={src} alt={alt} fill className="object-cover" sizes="(min-width: 1024px) 280px, 50vw" unoptimized />;
+function SmartImage({ src, alt, isPortrait = false }: { src: string; alt: string; isPortrait?: boolean }) {
+  return <Image src={src} alt={alt} fill className={isPortrait ? "object-cover object-top" : "object-cover"} sizes="(min-width: 1024px) 280px, 50vw" unoptimized />;
 }
 
 function initialImageText(collections: GalleryCollection[]) {
@@ -391,7 +391,7 @@ export function GalleryAlbumManager({ initialCollections, mediaAssets = [] }: { 
               {active.images.map((image) => (
                 <article key={image.id} className="grid gap-4 rounded-md border border-black/10 bg-white p-4 shadow-sm md:grid-cols-[180px_1fr]">
                   <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-black/5">
-                    <SmartImage src={image.mediaAsset.url} alt={image.alt} />
+                    <SmartImage src={image.mediaAsset.url} alt={image.alt} isPortrait={activeIsFamousFigures} />
                   </div>
                   <div className="grid gap-3">
                     <div className="grid gap-2">
