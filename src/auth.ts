@@ -51,7 +51,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user?.id) token.sub = user.id;
-      if (user) token.role = user.role ?? null;
+      if (user) {
+        token.role = user.role ?? null;
+        return token;
+      }
+
+      if (!token.role && token.sub) {
+        const prisma = getPrisma();
+        const currentUser = prisma
+          ? await prisma.user.findUnique({
+              where: { id: token.sub },
+              include: { role: true },
+            })
+          : null;
+        const isEnvAdmin = currentUser?.email === process.env.ADMIN_EMAIL || token.email === process.env.ADMIN_EMAIL;
+        token.role = currentUser?.role?.name ?? (isEnvAdmin ? "admin" : null);
+      }
       return token;
     },
     async session({ session, token }) {

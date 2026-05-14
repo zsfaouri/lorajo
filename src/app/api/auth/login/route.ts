@@ -21,7 +21,7 @@ export async function POST(request: Request) {
       id: user.id,
       email: user.email,
       name: user.name,
-      role: user.role?.name ?? null,
+      role: user.role?.name ?? (user.email === process.env.ADMIN_EMAIL ? "admin" : null),
     },
   });
 }
