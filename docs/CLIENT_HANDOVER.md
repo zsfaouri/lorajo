@@ -3,7 +3,7 @@
 Last updated: 2026-05-12  
 Project: LORA website and admin CMS  
 Repository: `https://github.com/zsfaouri/lorajo.git`  
-Production: `https://lora-website-cyan.vercel.app`  
+Production: `https://lorajo.org`  
 Vercel project: `lora-website`  
 Latest verified commit at handover: `6edd65b Simplify admin editing surfaces`
 
@@ -23,7 +23,7 @@ Use this table during handover:
 
 | Item | Value / Owner |
 | --- | --- |
-| Admin login URL | `https://lora-website-cyan.vercel.app/admin/login` |
+| Admin login URL | `https://lorajo.org/admin/login` |
 | Admin email | `HANDOVER_REQUIRED` |
 | Admin password | `HANDOVER_REQUIRED` |
 | GitHub owner/account | `HANDOVER_REQUIRED` |
@@ -40,7 +40,7 @@ Rotate the admin password after the client receives access.
 
 ### 3.1 Login
 
-1. Open `https://lora-website-cyan.vercel.app/admin/login`.
+1. Open `https://lorajo.org/admin/login`.
 2. Enter the admin email and password.
 3. After login, the admin dashboard opens.
 
@@ -618,7 +618,7 @@ The local Vercel project link is:
 Production should resolve to:
 
 ```text
-https://lora-website-cyan.vercel.app
+https://lorajo.org
 ```
 
 If a custom domain is connected later, update:
@@ -663,16 +663,16 @@ Run after each release.
 Public pages:
 
 ```text
-https://lora-website-cyan.vercel.app/en
-https://lora-website-cyan.vercel.app/en/founding-members
-https://lora-website-cyan.vercel.app/en/photo-gallery
-https://lora-website-cyan.vercel.app/en/gallery
+https://lorajo.org/en
+https://lorajo.org/en/founding-members
+https://lorajo.org/en/photo-gallery
+https://lorajo.org/en/gallery
 ```
 
 Admin:
 
 ```text
-https://lora-website-cyan.vercel.app/admin/login
+https://lorajo.org/admin/login
 ```
 
 Expected:

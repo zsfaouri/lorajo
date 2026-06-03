@@ -26,7 +26,7 @@ function cleanUrl(value: string) {
 }
 
 export function siteUrl() {
-  return cleanUrl(process.env.NEXT_PUBLIC_SITE_URL ?? "https://lora-website-cyan.vercel.app");
+  return cleanUrl(process.env.NEXT_PUBLIC_SITE_URL ?? "https://lorajo.org");
 }
 
 export function pagePath(locale: LocaleCode, slug: string) {
