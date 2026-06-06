@@ -10,6 +10,18 @@ const credentialsSchema = z.object({
   password: z.string().min(8),
 });
 
+function isEnvAdminLogin(email: string, password: string) {
+  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  const adminPassword = process.env.ADMIN_PASSWORD?.trim();
+
+  return Boolean(
+    adminEmail &&
+      adminPassword &&
+      email.trim().toLowerCase() === adminEmail &&
+      password === adminPassword,
+  );
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   pages: {
@@ -24,6 +36,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       authorize: async (credentials) => {
         const parsed = credentialsSchema.safeParse(credentials);
         if (!parsed.success) return null;
+
+        if (isEnvAdminLogin(parsed.data.email, parsed.data.password)) {
+          return {
+            id: "env-admin",
+            name: "LORA Admin",
+            email: parsed.data.email,
+            role: "admin",
+          };
+        }
 
         const prisma = getPrisma();
         if (!prisma) return null;
@@ -53,6 +74,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user?.id) token.sub = user.id;
       if (user) {
         token.role = user.role ?? null;
+        return token;
+      }
+
+      if (token.sub === "env-admin" || token.email === process.env.ADMIN_EMAIL) {
+        token.role = "admin";
         return token;
       }
 
