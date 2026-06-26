@@ -16,7 +16,9 @@ export const metadata: Metadata = {
   description: defaultSeoDescription,
   keywords: [
     "LORA",
+    "L.O.R.A",
     "Luweibdeh",
+    "Luweibdeh old residents association",
     "Jabal Al-Luweibdeh",
     "Amman heritage",
     "Jordan heritage",
@@ -49,7 +51,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/lora/brand/lora-logo.png", type: "image/png" },
+      { url: "/lora/brand/lora-logo.png", type: "image/png", sizes: "512x512" },
       { url: "/favicon.ico" },
     ],
     shortcut: "/lora/brand/lora-logo.png",
@@ -63,9 +65,9 @@ export const metadata: Metadata = {
     images: [
       {
         url: absoluteUrl(defaultOgImage),
-        width: 512,
-        height: 512,
-        alt: "LORA logo",
+        width: 1200,
+        height: 630,
+        alt: "Jabal Al-Luweibdeh heritage and public memory",
       },
     ],
     locale: "en_US",
@@ -73,7 +75,7 @@ export const metadata: Metadata = {
     type: "website",
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: defaultSeoTitle,
     description: defaultSeoDescription,
     images: [absoluteUrl(defaultOgImage)],

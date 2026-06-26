@@ -545,7 +545,7 @@ async function upsertPages() {
     locale: Locale.EN,
     slug: "home",
     title: "LORA",
-    seoDescription: "Luweibdeh Old Residents Association preserves heritage, greenery, and community life in Jabal Al-Luweibdeh.",
+    seoDescription: "L.O.R.A preserves Jabal Al-Luweibdeh's heritage architecture, greenery, cultural memory, and community life in Amman, Jordan.",
     sections: [
       {
         type: "hero",
@@ -636,15 +636,15 @@ async function upsertPages() {
   await createPageWithSections({
     locale: Locale.EN,
     slug: "who-we-are",
-    title: "LORA JO",
-    seoDescription: "The Association of Old Residents of Jabal Al-Luweibdeh.",
+    title: "L.O.R.A",
+    seoDescription: "Learn about L.O.R.A, the Luweibdeh Old Residents Association preserving Jabal Al-Luweibdeh's heritage, greenery, and community life.",
     sections: [
       {
         type: "hero",
         variant: "centered_minimal",
         content: {
-          title: "LORA JO",
-          subtitle: "The Association of Old Residents of Jabal Al-Luweibdeh (LORA)",
+          title: "L.O.R.A",
+          subtitle: "luweibdeh old residents association",
         },
       },
       {
@@ -666,7 +666,7 @@ async function upsertPages() {
     locale: Locale.EN,
     slug: "what-we-do",
     title: "What we do ?",
-    seoDescription: "LORA community, heritage, environmental, and local economic initiatives.",
+    seoDescription: "Explore L.O.R.A initiatives for heritage preservation, cultural activity, environmental care, and community engagement in Jabal Al-Luweibdeh.",
     sections: [
       {
         type: "rich_text",
@@ -697,7 +697,7 @@ async function upsertPages() {
     locale: Locale.EN,
     slug: "founding-members",
     title: "LORA",
-    seoDescription: "LORA founding members.",
+    seoDescription: "Meet the founding members behind L.O.R.A and their work to preserve Jabal Al-Luweibdeh's heritage, memory, and community life.",
     sections: [
       {
         type: "member_grid",
@@ -718,7 +718,7 @@ async function upsertPages() {
     locale: Locale.EN,
     slug: "photo-gallery",
     title: "PHOTO GALLERY",
-    seoDescription: "Historical photos, landmarks, and famous figures connected to Jabal Al-Luweibdeh.",
+    seoDescription: "Browse L.O.R.A's photo gallery of Jabal Al-Luweibdeh historical pictures, landmarks, public spaces, and famous figures.",
     sections: [
       {
         type: "gallery_masonry",
@@ -736,7 +736,7 @@ async function upsertPages() {
     locale: Locale.EN,
     slug: "neighborhood-archive",
     title: "Neighborhood Archive",
-    seoDescription: "A searchable library of neighborhood names, photos, videos, and memory fragments from Jabal Al-Luweibdeh.",
+    seoDescription: "Search L.O.R.A's neighborhood archive of Jabal Al-Luweibdeh names, photos, videos, labels, and memory fragments.",
     sections: [
       {
         type: "neighborhood_archive",
@@ -823,3 +823,4 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+

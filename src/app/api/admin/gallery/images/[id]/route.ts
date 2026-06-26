@@ -24,7 +24,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       ...(data.alt ? { alt: data.alt } : {}),
       caption: data.caption,
     },
-    include: { mediaAsset: { select: { id: true, url: true, alt: true, caption: true } } },
+    include: { mediaAsset: { select: { id: true, url: true, alt: true, caption: true, type: true } } },
   });
 
   await prisma.auditLog.create({

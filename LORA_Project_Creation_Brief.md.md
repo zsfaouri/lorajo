@@ -281,7 +281,7 @@ LORA JO
 Subtitle:
 
 ```txt
-The Association of Old Residents of Jabal Al-Luweibdeh (LORA)
+luweibdeh old residents association
 ```
 
 Body:
@@ -999,3 +999,4 @@ Start by creating:
 10. Initial homepage rendered from seeded data
 
 Do not implement random static pages. The first working version must already use the dynamic backend-controlled rendering model.
+

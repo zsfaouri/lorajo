@@ -70,11 +70,11 @@ const mediaWorkflows = [
   },
   {
     title: "Neighborhood Archive",
-    description: "Edit the archive page. Use the media link for archive images and videos.",
-    href: "/admin/neighborhood-archive",
+    description: "Edit archive pictures, videos, labels, and text from the Drive folder.",
+    href: "/admin/media?folder=neighborhood-archive",
     icon: Archive,
-    secondaryHref: "/admin/media?folder=neighborhood-archive",
-    secondaryLabel: "Edit media",
+    secondaryHref: "/admin/pages",
+    secondaryLabel: "Edit page title",
   },
   {
     title: "Hero Gallery",

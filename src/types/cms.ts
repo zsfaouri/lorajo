@@ -66,6 +66,7 @@ export type MemberDto = {
   name: string;
   slug: string;
   title?: string | null;
+  bio?: string | null;
   image?: CmsImage | null;
   sortOrder: number;
 };

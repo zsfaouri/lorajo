@@ -38,9 +38,7 @@ const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
     },
     ref,
   ) => {
-    const dayOfWeek = date.toLocaleDateString("en-US", { weekday: "long" }).toUpperCase();
-    const month = date.toLocaleDateString("en-US", { month: "short" });
-    const day = date.getDate();
+    const year = date.getFullYear();
     const labelledBy = React.useId();
 
     return (
@@ -63,11 +61,8 @@ const EventCard = React.forwardRef<HTMLDivElement, EventCardProps>(
               <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
             </div>
             <div className="text-right">
-              <p className="text-xs font-semibold tracking-widest text-slate-500">{dayOfWeek}</p>
-              <p className="text-4xl font-bold text-slate-950">
-                <span className="mr-2">{month}</span>
-                {day}
-              </p>
+              <p className="text-xs font-semibold tracking-widest text-slate-500">YEAR</p>
+              <p className="text-4xl font-bold text-slate-950">{year}</p>
             </div>
           </div>
 

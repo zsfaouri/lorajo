@@ -54,6 +54,22 @@ export const volunteerSchema = z.object({
   message: z.string().max(5000).optional().nullable(),
 });
 
+export const membershipApplicationSchema = z.object({
+  name: z.string().min(2).max(160),
+  birthYear: z.string().regex(/^\d{4}$/, "Enter a four-digit year"),
+  postalAddress: z.string().min(2).max(500),
+  mobile: z.string().min(6).max(60),
+  email: z.string().email(),
+  website: z.string().max(200).optional().nullable(),
+  profession: z.string().max(160).optional().nullable(),
+  hobbies: z.string().max(1000).optional().nullable(),
+  relationToJabalLuweibdeh: z.string().min(2).max(1000),
+  applicationYear: z.string().regex(/^\d{4}$/, "Enter a four-digit year"),
+  recommendationOneName: z.string().max(160).optional().nullable(),
+  recommendationTwoName: z.string().max(160).optional().nullable(),
+  membershipType: z.enum(["supporting", "honorary", "full"]),
+});
+
 export const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
@@ -73,6 +89,7 @@ export const memberSchema = z.object({
   name: z.string().min(1),
   slug: z.string().min(1),
   title: z.string().optional().nullable(),
+  bio: z.string().max(1200).optional().nullable(),
   mediaAssetId: z.string().min(1).optional().nullable(),
   sortOrder: z.number().int().default(0),
   isFounder: z.boolean().default(false),

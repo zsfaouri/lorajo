@@ -57,6 +57,7 @@ export async function AdminPageEditorLoader({ lookup }: { lookup: PageLookup }) 
   const prisma = getPrisma();
 
   if (prisma) {
+    try {
     const mediaAssetsPromise = listAdminMedia();
     let page =
       "id" in lookup
@@ -90,6 +91,9 @@ export async function AdminPageEditorLoader({ lookup }: { lookup: PageLookup }) 
         mediaAssets={mediaAssets}
       />
     );
+    } catch (error) {
+      console.error("[admin-page-editor] load failed:", error instanceof Error ? error.message : error);
+    }
   }
 
   const page = fallbackPageForLookup(lookup);

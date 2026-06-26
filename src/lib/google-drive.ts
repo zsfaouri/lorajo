@@ -6,6 +6,7 @@ type DriveUploadInput = {
   fileName: string;
   mimeType: string;
   bytes: Buffer;
+  folderId?: string;
 };
 
 type DriveUploadResult = {
@@ -60,6 +61,10 @@ export function googleDriveImageUrl(fileId: string) {
 
 export function googleDriveVideoUrl(fileId: string) {
   return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview`;
+}
+
+export function googleDriveFileUrl(fileId: string) {
+  return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`;
 }
 
 function decodeHtml(value: string) {
@@ -263,14 +268,14 @@ export async function createGoogleDriveFolder(name: string, parentFolderId = get
   };
 }
 
-export async function uploadToGoogleDrive({ fileName, mimeType, bytes }: DriveUploadInput): Promise<DriveUploadResult | null> {
+export async function uploadToGoogleDrive({ fileName, mimeType, bytes, folderId }: DriveUploadInput): Promise<DriveUploadResult | null> {
   const drive = await getDriveClient();
   if (!drive) return null;
 
   const created = await drive.files.create({
     requestBody: {
       name: fileName,
-      parents: [getRootFolderId()],
+      parents: [folderId || getRootFolderId()],
     },
     media: {
       mimeType,
@@ -288,6 +293,6 @@ export async function uploadToGoogleDrive({ fileName, mimeType, bytes }: DriveUp
     id,
     publicId: id,
     source: "google drive",
-    url: googleDriveImageUrl(id),
+    url: mimeType.startsWith("image/") ? googleDriveImageUrl(id) : mimeType.startsWith("video/") ? googleDriveVideoUrl(id) : googleDriveFileUrl(id),
   };
 }

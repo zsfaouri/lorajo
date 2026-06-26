@@ -3,12 +3,19 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { fallbackFooter } from "@/lib/fallback-data";
 import { getPrisma } from "@/lib/prisma";
 
+function fallbackColumns() {
+  return [...fallbackFooter.en.map((item) => ({ ...item, locale: "EN" })), ...fallbackFooter.ar.map((item) => ({ ...item, locale: "AR" }))];
+}
+
 export default async function AdminFooterPage() {
   await requireAdmin();
   const prisma = getPrisma();
   const columns = prisma
-    ? await prisma.footerColumn.findMany({ orderBy: [{ locale: "asc" }, { sortOrder: "asc" }] })
-    : [...fallbackFooter.en.map((item) => ({ ...item, locale: "EN" })), ...fallbackFooter.ar.map((item) => ({ ...item, locale: "AR" }))];
+    ? await prisma.footerColumn.findMany({ orderBy: [{ locale: "asc" }, { sortOrder: "asc" }] }).catch((error: unknown) => {
+        console.error("[admin/footer] load failed:", error instanceof Error ? error.message : error);
+        return fallbackColumns();
+      })
+    : fallbackColumns();
 
   return (
     <FooterFormEditor

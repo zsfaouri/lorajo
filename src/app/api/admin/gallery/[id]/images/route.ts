@@ -27,7 +27,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       caption: data.caption,
       sortOrder: existingCount + 1,
     },
-    include: { mediaAsset: { select: { id: true, url: true, alt: true, caption: true } } },
+    include: { mediaAsset: { select: { id: true, url: true, alt: true, caption: true, type: true } } },
   });
 
   await prisma.auditLog.create({

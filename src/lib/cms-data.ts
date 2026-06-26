@@ -38,25 +38,72 @@ function asRecord(value: unknown): Record<string, unknown> {
   return isRecord(value) ? value : {};
 }
 
+function normalizeAssociationName(value: string) {
+  return value
+    .replaceAll("The Association of Old Residents of Jabal Al-Luweibdeh (LORA)", "luweibdeh old residents association")
+    .replaceAll("The Association of Old Residents of Jabal Al-Luweibdeh.", "luweibdeh old residents association")
+    .replaceAll("The Association of Old Residents of Jabal Al-Luweibdeh", "luweibdeh old residents association")
+    .replaceAll("Association of Old Residents of Jabal Al-Luweibdeh", "luweibdeh old residents association");
+}
+
+function normalizeContentText<T>(value: T): T {
+  if (typeof value === "string") return normalizeAssociationName(value) as T;
+  if (Array.isArray(value)) return value.map((item) => normalizeContentText(item)) as T;
+  if (!isRecord(value)) return value;
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [key, normalizeContentText(item)]),
+  ) as T;
+}
+
 function galleryTitleForSlug(slug: string, title: string) {
-  if (slug === "famous-figures") return "Famous Figures";
-  if (slug === "historical-photos") return "Historical Pics";
-  if (slug === "landmarks") return "Landmarks";
   return title;
 }
 
 const publicGallerySlugs = ["famous-figures", "historical-photos", "landmarks"];
 
-function defaultNavigationItem(locale: LocaleCode): NavigationItemDto {
-  return locale === "ar"
-    ? { id: "nav-ar-neighborhood-archive", label: "أرشيف الحي", path: "/ar/neighborhood-archive", sortOrder: 5, isVisible: true }
-    : { id: "nav-en-neighborhood-archive", label: "NEIGHBORHOOD ARCHIVE", path: "/en/neighborhood-archive", sortOrder: 5, isVisible: true };
+function localizedMemberBio(value: unknown, locale: LocaleCode) {
+  if (typeof value === "string" && value.trim()) return value;
+  const bio = asRecord(value);
+  const localized = bio[locale];
+  if (typeof localized === "string" && localized.trim()) return localized;
+  const english = bio.en;
+  if (typeof english === "string" && english.trim()) return english;
+  const arabic = bio.ar;
+  if (typeof arabic === "string" && arabic.trim()) return arabic;
+  const text = bio.text;
+  return typeof text === "string" && text.trim() ? text : null;
 }
 
-function withDefaultNavigation(locale: LocaleCode, items: NavigationItemDto[]) {
-  const archivePath = `/${locale}/neighborhood-archive`;
-  if (items.some((item) => item.path === archivePath || item.label.toLowerCase() === "neighborhood archive")) return items;
-  return [...items, defaultNavigationItem(locale)].sort((a, b) => a.sortOrder - b.sortOrder);
+function mergedPublicNavigation(locale: LocaleCode, items: NavigationItemDto[]) {
+  const expected = locale === "ar"
+    ? [
+        { slug: "who-we-are", label: "من نحن" },
+        { slug: "photo-gallery", label: "معرض الصور" },
+        { slug: "neighborhood-archive", label: "أرشيف الحي" },
+        { slug: "join-us", label: "انضم إلينا" },
+      ]
+    : [
+        { slug: "who-we-are", label: "WHO WE ARE" },
+        { slug: "photo-gallery", label: "PHOTO GALLERY" },
+        { slug: "neighborhood-archive", label: "NEIGHBORHOOD ARCHIVE" },
+        { slug: "join-us", label: "JOIN US" },
+      ];
+
+  return expected
+    .map((target, index) => {
+    const path = `/${locale}/${target.slug}`;
+    const existing = items.find((item) => item.path === path || item.path.endsWith(`/${target.slug}`));
+    return {
+      id: existing?.id ?? `nav-${locale}-${target.slug}`,
+      label: existing?.label ?? target.label,
+      path: existing?.path ?? path,
+      sortOrder: existing?.sortOrder ?? index + 1,
+      isVisible: existing?.isVisible ?? true,
+    };
+  })
+    .filter((item) => item.isVisible)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
 export async function getActiveTheme(): Promise<ThemeTokens> {
@@ -75,7 +122,7 @@ export async function getActiveTheme(): Promise<ThemeTokens> {
 export async function getNavigation(locale: LocaleCode): Promise<NavigationItemDto[]> {
   noStore();
   const prisma = getPrisma();
-  if (!prisma) return withDefaultNavigation(locale, fallbackNavigation[locale]);
+  if (!prisma) return mergedPublicNavigation(locale, fallbackNavigation[locale]);
 
   try {
     const items = await prisma.navigationItem.findMany({
@@ -83,7 +130,7 @@ export async function getNavigation(locale: LocaleCode): Promise<NavigationItemD
       orderBy: { sortOrder: "asc" },
     });
 
-    return withDefaultNavigation(locale, items.map((item) => ({
+    return mergedPublicNavigation(locale, items.map((item) => ({
       id: item.id,
       label: item.label,
       path: item.path,
@@ -91,7 +138,7 @@ export async function getNavigation(locale: LocaleCode): Promise<NavigationItemD
       isVisible: item.isVisible,
     })));
   } catch {
-    return withDefaultNavigation(locale, fallbackNavigation[locale]);
+    return mergedPublicNavigation(locale, fallbackNavigation[locale]);
   }
 }
 
@@ -110,7 +157,7 @@ export async function getFooter(locale: LocaleCode): Promise<FooterColumnDto[]> 
       id: column.id,
       title: column.title,
       sortOrder: column.sortOrder,
-      content: asRecord(column.content),
+      content: normalizeContentText(asRecord(column.content)),
       links: Array.isArray(column.links) ? (column.links as FooterColumnDto["links"]) : [],
     }));
   } catch {
@@ -139,6 +186,7 @@ export async function getMembers(locale: LocaleCode): Promise<MemberDto[]> {
       name: member.name,
       slug: member.slug,
       title: member.title,
+      bio: localizedMemberBio(member.bio, locale),
       sortOrder: member.sortOrder,
       image: member.mediaAsset
         ? {
@@ -346,7 +394,7 @@ export async function getPageBySlug(locale: LocaleCode, slug: string): Promise<C
       slug: page.slug,
       title: page.title,
       seoTitle: page.seoTitle,
-      seoDescription: page.seoDescription,
+      seoDescription: page.seoDescription ? normalizeAssociationName(page.seoDescription) : page.seoDescription,
       seoImage: page.seoImage,
       status: page.status,
       sections: page.sections.map((section) => ({
@@ -355,7 +403,7 @@ export async function getPageBySlug(locale: LocaleCode, slug: string): Promise<C
         variant: section.variant,
         sortOrder: section.sortOrder,
         isVisible: section.isVisible,
-        content: asRecord(section.content),
+        content: normalizeContentText(asRecord(section.content)),
         settings: asRecord(section.settings),
         spacing: asRecord(section.spacing),
         background: asRecord(section.background),

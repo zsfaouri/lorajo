@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ExternalLink, Plus, RefreshCw } from "lucide-react";
+import { ExternalLink, Plus, RefreshCw, Upload } from "lucide-react";
 
 import { DriveImagePicker, type DriveMediaAsset } from "@/components/admin/drive-image-picker";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ type MediaAsset = {
   url: string;
   alt?: string | null;
   caption?: string | null;
+  type?: string | null;
 };
 
 type GalleryImage = {
@@ -49,8 +50,12 @@ type NewProfileForm = {
   caption: string;
 };
 
-function SmartImage({ src, alt, isPortrait = false }: { src: string; alt: string; isPortrait?: boolean }) {
-  return <Image src={src} alt={alt} fill className={isPortrait ? "object-cover object-top" : "object-cover"} sizes="(min-width: 1024px) 280px, 50vw" unoptimized />;
+function SmartMedia({ asset, alt, isPortrait = false }: { asset: MediaAsset; alt: string; isPortrait?: boolean }) {
+  if (asset.type === "VIDEO") {
+    return <video src={asset.url} className="h-full w-full object-cover" muted playsInline controls preload="metadata" />;
+  }
+
+  return <Image src={asset.url} alt={alt} fill className={isPortrait ? "object-cover object-top" : "object-cover"} sizes="(min-width: 1024px) 280px, 50vw" unoptimized />;
 }
 
 function initialImageText(collections: GalleryCollection[]) {
@@ -77,10 +82,15 @@ export function GalleryAlbumManager({ initialCollections, mediaAssets = [] }: { 
   const [status, setStatus] = useState("");
   const [newFolderName, setNewFolderName] = useState("");
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadAlt, setUploadAlt] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
   const [newProfile, setNewProfile] = useState<NewProfileForm>(emptyNewProfile);
   const [imageText, setImageText] = useState<Record<string, { alt: string; caption: string }>>(initialImageText(initialCollections));
   const active = useMemo(() => collections.find((collection) => collection.id === activeId) ?? collections[0], [activeId, collections]);
   const activeIsFamousFigures = active?.slug === "famous-figures";
+  const activeIsArchive = active?.slug === "neighborhood-archive";
+  const activeAcceptsVideo = Boolean(activeIsArchive);
 
   useEffect(() => {
     if (!requestedFolder) return;
@@ -91,6 +101,8 @@ export function GalleryAlbumManager({ initialCollections, mediaAssets = [] }: { 
   function openCollection(collection: GalleryCollection) {
     setActiveId(collection.id);
     setNewProfile(emptyNewProfile);
+    setUploadFile(null);
+    setUploadAlt("");
     router.replace(`/admin/media?folder=${collection.slug}`, { scroll: false });
   }
 
@@ -105,6 +117,8 @@ export function GalleryAlbumManager({ initialCollections, mediaAssets = [] }: { 
     setImageText(initialImageText(json));
     setActiveId(nextActiveId || json[0]?.id || "");
     setNewProfile(emptyNewProfile);
+    setUploadFile(null);
+    setUploadAlt("");
   }
 
   async function syncDrive() {
@@ -174,6 +188,61 @@ export function GalleryAlbumManager({ initialCollections, mediaAssets = [] }: { 
       })),
     );
     setStatus("Image text saved.");
+  }
+
+  async function uploadToActiveFolder() {
+    if (!active) return;
+    if (!active.driveFolderId) {
+      setStatus("This tab is not linked to a Google Drive folder yet. Click Sync Google Drive first.");
+      return;
+    }
+    if (!uploadFile) {
+      setStatus("Choose an image to upload.");
+      return;
+    }
+    if (!uploadFile.type.startsWith("image/") && !(activeAcceptsVideo && uploadFile.type.startsWith("video/"))) {
+      setStatus(activeAcceptsVideo ? "This tab accepts images and videos only." : "Gallery tabs accept image files only.");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      setStatus(`Uploading to ${active.title} in Google Drive...`);
+      const form = new FormData();
+      form.append("file", uploadFile);
+      form.append("folderId", active.driveFolderId);
+      form.append("category", active.slug);
+      form.append("alt", uploadAlt.trim() || uploadFile.name);
+
+      const uploadResponse = await fetch("/api/admin/media", { method: "POST", body: form });
+      const uploaded = await uploadResponse.json();
+      if (!uploadResponse.ok) {
+        setStatus(uploaded.error ?? "Upload failed.");
+        return;
+      }
+
+      const imageResponse = await fetch(`/api/admin/gallery/${active.id}/images`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mediaAssetId: uploaded.id, alt: uploadAlt.trim() || uploaded.alt || uploadFile.name, caption: null }),
+      });
+      const image = await imageResponse.json();
+      if (!imageResponse.ok) {
+        setStatus(image.error ?? "Uploaded to Drive, but could not add it to this website tab.");
+        return;
+      }
+
+      setCollections((current) =>
+        current.map((collection) => (collection.id === active.id ? { ...collection, images: [...collection.images, image] } : collection)),
+      );
+      setImageText((current) => ({ ...current, [image.id]: { alt: image.alt, caption: image.caption ?? "" } }));
+      setUploadFile(null);
+      setUploadAlt("");
+      setStatus("Uploaded to Drive and added to this website tab.");
+      router.refresh();
+    } finally {
+      setIsUploading(false);
+    }
   }
 
   async function addProfile() {
@@ -303,7 +372,7 @@ export function GalleryAlbumManager({ initialCollections, mediaAssets = [] }: { 
               >
                 <span className="block text-sm font-medium">{collection.title}</span>
                 <span className={cn("mt-1 block text-xs", collection.id === active?.id ? "text-white/70" : "text-black/42")}>
-                  {collection.images.length} photos · Google Drive
+                  {collection.images.length} records · Google Drive
                 </span>
               </button>
             ))}
@@ -337,13 +406,35 @@ export function GalleryAlbumManager({ initialCollections, mediaAssets = [] }: { 
                   <div>
                     <p className="text-sm font-medium text-black">{activeIsFamousFigures ? "Add profile" : "Add image"}</p>
                     <p className="mt-1 text-sm leading-6 text-black/55">
-                      Pick a synced Google Drive image, then add the text shown on the website.
+                      Pick a synced Google Drive {activeAcceptsVideo ? "image or video" : "image"}, then add the label and text shown on the website.
                     </p>
                   </div>
                   <Button type="button" variant="green" onClick={addProfile} className="shrink-0">
                     <Plus size={16} />
                     {activeIsFamousFigures ? "Add profile" : "Add image"}
                   </Button>
+                </div>
+
+                <div className="grid gap-3 rounded-md border border-black/10 bg-white p-3">
+                  <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                    <div className="grid flex-1 gap-2">
+                      <Label>Upload to this Drive folder</Label>
+                      <Input type="file" accept={activeAcceptsVideo ? "image/*,video/*" : "image/*"} onChange={(event) => setUploadFile(event.target.files?.[0] ?? null)} />
+                    </div>
+                    <div className="grid flex-1 gap-2">
+                      <Label>Name / alt text</Label>
+                      <Input value={uploadAlt} onChange={(event) => setUploadAlt(event.target.value)} placeholder={uploadFile?.name ?? "Image title"} />
+                    </div>
+                    <Button type="button" variant="green" onClick={uploadToActiveFolder} disabled={isUploading} className="shrink-0">
+                      <Upload size={16} />
+                      {isUploading ? "Uploading..." : "Upload"}
+                    </Button>
+                  </div>
+                  {active.driveFolderId ? (
+                    <a href={`https://drive.google.com/drive/folders/${active.driveFolderId}`} target="_blank" rel="noreferrer" className="text-sm text-[var(--color-heritage-green)] underline-offset-4 hover:underline">
+                      Open this tab folder in Google Drive
+                    </a>
+                  ) : null}
                 </div>
 
                 <DriveImagePicker
@@ -356,23 +447,23 @@ export function GalleryAlbumManager({ initialCollections, mediaAssets = [] }: { 
                       alt: current.alt || asset.alt || asset.caption || "",
                     }))
                   }
-                  title={activeIsFamousFigures ? "Profile picture" : "Gallery picture"}
-                  description={`Choose from synced Google Drive images in ${active.title}.`}
+                  title={activeIsFamousFigures ? "Profile picture" : activeAcceptsVideo ? "Archive media" : "Gallery picture"}
+                  description={`Choose from synced Google Drive ${activeAcceptsVideo ? "media" : "images"} in ${active.title}.`}
                   folderId={active.driveFolderId ?? undefined}
                   compact
                 />
 
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label>Name / title</Label>
+                    <Label>{activeIsArchive ? "Label / name" : "Name / title"}</Label>
                     <Input
                       value={newProfile.alt}
                       onChange={(event) => setNewProfile((current) => ({ ...current, alt: event.target.value }))}
-                      placeholder={activeIsFamousFigures ? "Profile name" : "Image title"}
+                      placeholder={activeIsArchive ? "Archive label" : activeIsFamousFigures ? "Profile name" : "Image title"}
                     />
                   </div>
                   <div className="grid gap-2 md:row-span-2">
-                    <Label>Text shown on website</Label>
+                    <Label>{activeIsArchive ? "Archive text" : "Text shown on website"}</Label>
                     <Textarea
                       value={newProfile.caption}
                       onChange={(event) => setNewProfile((current) => ({ ...current, caption: event.target.value }))}
@@ -391,11 +482,11 @@ export function GalleryAlbumManager({ initialCollections, mediaAssets = [] }: { 
               {active.images.map((image) => (
                 <article key={image.id} className="grid gap-4 rounded-md border border-black/10 bg-white p-4 shadow-sm md:grid-cols-[180px_1fr]">
                   <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-black/5">
-                    <SmartImage src={image.mediaAsset.url} alt={image.alt} isPortrait={activeIsFamousFigures} />
+                    <SmartMedia asset={image.mediaAsset} alt={image.alt} isPortrait={activeIsFamousFigures} />
                   </div>
                   <div className="grid gap-3">
                     <div className="grid gap-2">
-                      <Label>Name / title</Label>
+                      <Label>{activeIsArchive ? "Label / name" : "Name / title"}</Label>
                       <Input
                         value={imageText[image.id]?.alt ?? image.alt}
                         onChange={(event) =>
@@ -407,7 +498,7 @@ export function GalleryAlbumManager({ initialCollections, mediaAssets = [] }: { 
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label>Text shown on website</Label>
+                      <Label>{activeIsArchive ? "Archive text" : "Text shown on website"}</Label>
                       <Textarea
                         value={imageText[image.id]?.caption ?? image.caption ?? ""}
                         onChange={(event) =>
@@ -446,4 +537,3 @@ export function GalleryAlbumManager({ initialCollections, mediaAssets = [] }: { 
     </div>
   );
 }
-

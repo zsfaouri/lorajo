@@ -15,6 +15,7 @@ export type DriveMediaAsset = {
   url: string;
   alt?: string | null;
   caption?: string | null;
+  type?: string | null;
   source?: string | null;
   metadata?: unknown;
 };
@@ -128,7 +129,7 @@ export function DriveImagePicker({
     setStatus("Reading Google Drive...");
     try {
       const result = await syncGoogleDrive(folderId);
-      setStatus(`Synced ${result.folders ?? 0} folders / ${result.images ?? 0} images.`);
+      setStatus(`Synced ${result.folders ?? 0} folders / ${result.images ?? 0} files.`);
       router.refresh();
     } catch (caught) {
       setStatus(caught instanceof Error ? caught.message : "Drive sync failed.");
@@ -149,7 +150,7 @@ export function DriveImagePicker({
       </div>
 
       <div className="grid gap-2 md:grid-cols-[1fr_180px]">
-        <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search Drive pictures" />
+        <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search Drive files" />
         {!lockCategory && !folderId ? (
           <select
             value={activeCategory}
@@ -168,7 +169,7 @@ export function DriveImagePicker({
 
       {filteredAssets.length === 0 ? (
         <div className="rounded-md border border-dashed border-black/15 bg-black/[0.02] p-5 text-sm leading-6 text-black/55">
-          {emptyMessage ?? "No Drive pictures found for this category. Add pictures to the matching Google Drive folder, then click Sync Drive."}
+          {emptyMessage ?? "No Drive files found for this category. Add files to the matching Google Drive folder, then click Sync Drive."}
         </div>
       ) : (
         <div className="grid max-h-[420px] gap-3 overflow-auto sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
@@ -186,9 +187,13 @@ export function DriveImagePicker({
                 title={asset.caption ?? asset.alt ?? "Google Drive image"}
               >
                 <div className="relative aspect-square bg-black/5">
-                  <Image src={asset.url} alt={asset.alt ?? "Google Drive image"} fill className="object-cover" sizes="160px" unoptimized />
+                  {asset.type === "VIDEO" ? (
+                    <video src={asset.url} className="h-full w-full object-cover" muted playsInline preload="metadata" />
+                  ) : (
+                    <Image src={asset.url} alt={asset.alt ?? "Google Drive image"} fill className="object-cover" sizes="160px" unoptimized />
+                  )}
                 </div>
-                <span className="block truncate px-2 pt-2 text-xs font-medium text-black/70">{asset.caption ?? asset.alt ?? "Image"}</span>
+                <span className="block truncate px-2 pt-2 text-xs font-medium text-black/70">{asset.caption ?? asset.alt ?? (asset.type === "VIDEO" ? "Video" : "Image")}</span>
                 <span className="block truncate px-2 pb-2 pt-0.5 text-[11px] text-black/42">{driveAssetCategoryLabel(asset)}</span>
               </button>
             );

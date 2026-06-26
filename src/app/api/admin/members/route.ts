@@ -1,4 +1,4 @@
-import { PublishState } from "@prisma/client";
+import { Locale, Prisma, PublishState } from "@prisma/client";
 
 import { error, ok, parseJson, requireAdminApi, requirePrisma } from "@/lib/api-utils";
 import { memberSchema } from "@/lib/validations";
@@ -19,8 +19,21 @@ export async function POST(request: Request) {
   const { data, response } = await parseJson(request, memberSchema);
   if (response) return response;
 
+  const memberData: Prisma.MemberUncheckedCreateInput = {
+    locale: data.locale as Locale,
+    name: data.name,
+    slug: data.slug,
+    title: data.title,
+    bio: data.bio ?? Prisma.JsonNull,
+    mediaAssetId: data.mediaAssetId,
+    sortOrder: data.sortOrder,
+    isFounder: data.isFounder,
+    status: data.status as PublishState,
+  };
+
   const member = await prisma.member.create({
-    data: { ...data, status: data.status as PublishState },
+    data: memberData,
+    include: { mediaAsset: true },
   });
   await prisma.auditLog.create({ data: { userId: session.user?.id, action: "create", entity: "Member", entityId: member.id } });
   return ok(member, { status: 201 });

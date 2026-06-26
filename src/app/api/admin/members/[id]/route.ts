@@ -1,4 +1,4 @@
-import { PublishState } from "@prisma/client";
+import { Locale, Prisma, PublishState } from "@prisma/client";
 
 import { error, ok, parseJson, requireAdminApi, requirePrisma } from "@/lib/api-utils";
 import { memberSchema } from "@/lib/validations";
@@ -12,7 +12,18 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
   const { data, response } = await parseJson(request, memberSchema.partial());
   if (response) return response;
 
-  const member = await prisma.member.update({ where: { id }, data: { ...data, status: data.status as PublishState | undefined } });
+  const memberData: Prisma.MemberUncheckedUpdateInput = {};
+  if (data.locale !== undefined) memberData.locale = data.locale as Locale;
+  if (data.name !== undefined) memberData.name = data.name;
+  if (data.slug !== undefined) memberData.slug = data.slug;
+  if (data.title !== undefined) memberData.title = data.title;
+  if (data.bio !== undefined) memberData.bio = data.bio ?? Prisma.JsonNull;
+  if (data.mediaAssetId !== undefined) memberData.mediaAssetId = data.mediaAssetId;
+  if (data.sortOrder !== undefined) memberData.sortOrder = data.sortOrder;
+  if (data.isFounder !== undefined) memberData.isFounder = data.isFounder;
+  if (data.status !== undefined) memberData.status = data.status as PublishState;
+
+  const member = await prisma.member.update({ where: { id }, data: memberData, include: { mediaAsset: true } });
   await prisma.auditLog.create({ data: { userId: session.user?.id, action: "update", entity: "Member", entityId: id } });
   return ok(member);
 }

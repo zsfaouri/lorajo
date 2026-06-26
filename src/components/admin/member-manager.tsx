@@ -19,6 +19,7 @@ type Member = {
   name: string;
   slug: string;
   title?: string | null;
+  bio?: unknown;
   sortOrder: number;
   isFounder: boolean;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED" | string;
@@ -31,6 +32,7 @@ type DraftMember = {
   name: string;
   slug: string;
   title: string;
+  bio: string;
   sortOrder: number;
   isFounder: boolean;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
@@ -45,12 +47,26 @@ function makeSlug(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+function bioToText(value: unknown, locale: "EN" | "AR" | string) {
+  if (typeof value === "string") return value;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return "";
+  const record = value as Record<string, unknown>;
+  const localeKey = locale === "AR" ? "ar" : "en";
+  const localized = record[localeKey];
+  if (typeof localized === "string") return localized;
+  const english = record.en;
+  if (typeof english === "string") return english;
+  const text = record.text;
+  return typeof text === "string" ? text : "";
+}
+
 function memberToDraft(member: Member): DraftMember {
   return {
     locale: member.locale === "AR" ? "AR" : "EN",
     name: member.name,
     slug: member.slug,
     title: member.title ?? "",
+    bio: bioToText(member.bio, member.locale),
     sortOrder: member.sortOrder ?? 0,
     isFounder: Boolean(member.isFounder),
     status: member.status === "DRAFT" || member.status === "ARCHIVED" ? member.status : "PUBLISHED",
@@ -64,6 +80,7 @@ function emptyDraft(sortOrder: number): DraftMember {
     name: "",
     slug: "",
     title: "Founding member",
+    bio: "",
     sortOrder,
     isFounder: true,
     status: "PUBLISHED",
@@ -77,6 +94,7 @@ function payloadFromDraft(draft: DraftMember) {
     name: draft.name.trim(),
     slug: draft.slug.trim() || makeSlug(draft.name),
     title: draft.title.trim() || null,
+    bio: draft.bio.trim() || null,
     sortOrder: Number(draft.sortOrder) || 0,
     isFounder: draft.isFounder,
     status: draft.status,
@@ -306,6 +324,15 @@ export function MemberManager({
                 <div className="grid gap-1.5">
                   <Label className="text-white/55">Role / title</Label>
                   <Input value={activeDraft.title} onChange={(event) => setActiveDraft({ title: event.target.value })} className="border-white/15 bg-white/8 text-white" />
+                </div>
+                <div className="grid gap-1.5 md:col-span-2">
+                  <Label className="text-white/55">Flip card text</Label>
+                  <textarea
+                    value={activeDraft.bio}
+                    onChange={(event) => setActiveDraft({ bio: event.target.value })}
+                    className="min-h-28 rounded-md border border-white/15 bg-white/8 px-3 py-2 text-sm leading-6 text-white outline-none transition placeholder:text-white/30 focus:border-white/35"
+                    placeholder="This text appears on the off-white back side when visitors click the founder photo."
+                  />
                 </div>
                 <div className="grid gap-1.5">
                   <Label className="text-white/55">Public URL slug</Label>

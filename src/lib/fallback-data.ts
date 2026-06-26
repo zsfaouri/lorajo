@@ -19,6 +19,7 @@ export const fallbackNavigation: Record<LocaleCode, NavigationItemDto[]> = {
     { id: "nav-en-members", label: "FOUNDING MEMBERS", path: "/en/founding-members", sortOrder: 3, isVisible: true },
     { id: "nav-en-gallery", label: "PHOTO GALLERY", path: "/en/photo-gallery", sortOrder: 4, isVisible: true },
     { id: "nav-en-neighborhood-archive", label: "NEIGHBORHOOD ARCHIVE", path: "/en/neighborhood-archive", sortOrder: 5, isVisible: true },
+    { id: "nav-en-join-us", label: "JOIN US", path: "/en/join-us", sortOrder: 6, isVisible: true },
   ],
   ar: [
     { id: "nav-ar-who", label: "من نحن", path: "/ar/who-we-are", sortOrder: 1, isVisible: true },
@@ -408,8 +409,8 @@ export const fallbackPages: Record<LocaleCode, Record<string, CmsPage>> = {
       locale: "en",
       slug: "home",
       title: "LORA",
-      seoTitle: "LORA - Luweibdeh Old Residents Association",
-      seoDescription: "LORA preserves Jabal Al-Luweibdeh's historical architecture, greenery, and cultural heritage.",
+      seoTitle: "L.O.R.A | Luweibdeh Old Residents Association",
+      seoDescription: "L.O.R.A preserves Jabal Al-Luweibdeh's heritage architecture, greenery, cultural memory, and community life in Amman, Jordan.",
       status: "PUBLISHED",
       sections: [
         {
@@ -517,9 +518,9 @@ export const fallbackPages: Record<LocaleCode, Record<string, CmsPage>> = {
       id: "page-en-who",
       locale: "en",
       slug: "who-we-are",
-      title: "LORA JO",
-      seoTitle: "Who We Are - LORA",
-      seoDescription: "The Association of Old Residents of Jabal Al-Luweibdeh.",
+      title: "L.O.R.A",
+      seoTitle: "Who We Are | L.O.R.A Luweibdeh Old Residents Association",
+      seoDescription: "Learn about L.O.R.A, the Luweibdeh Old Residents Association preserving Jabal Al-Luweibdeh's heritage, greenery, and community life.",
       status: "PUBLISHED",
       sections: [
         {
@@ -529,8 +530,8 @@ export const fallbackPages: Record<LocaleCode, Record<string, CmsPage>> = {
           sortOrder: 1,
           isVisible: true,
           content: {
-            title: "LORA JO",
-            subtitle: "The Association of Old Residents of Jabal Al-Luweibdeh (LORA)",
+            title: "L.O.R.A",
+            subtitle: "luweibdeh old residents association",
           },
           settings: {},
         },
@@ -557,8 +558,8 @@ export const fallbackPages: Record<LocaleCode, Record<string, CmsPage>> = {
       locale: "en",
       slug: "what-we-do",
       title: "What we do ?",
-      seoTitle: "What We Do - LORA",
-      seoDescription: "LORA community, heritage, environmental, and local economic initiatives.",
+      seoTitle: "Community and Heritage Initiatives | L.O.R.A",
+      seoDescription: "Explore L.O.R.A initiatives for heritage preservation, cultural activity, environmental care, and community engagement in Jabal Al-Luweibdeh.",
       status: "PUBLISHED",
       sections: [
         {
@@ -603,8 +604,8 @@ export const fallbackPages: Record<LocaleCode, Record<string, CmsPage>> = {
       locale: "en",
       slug: "founding-members",
       title: "LORA",
-      seoTitle: "Founding Members - LORA",
-      seoDescription: "LORA founding members.",
+      seoTitle: "Founding Members | L.O.R.A",
+      seoDescription: "Meet the founding members behind L.O.R.A and their work to preserve Jabal Al-Luweibdeh's heritage, memory, and community life.",
       status: "PUBLISHED",
       sections: [
         {
@@ -637,8 +638,8 @@ export const fallbackPages: Record<LocaleCode, Record<string, CmsPage>> = {
       locale: "en",
       slug: "photo-gallery",
       title: "PHOTO GALLERY",
-      seoTitle: "Photo Gallery - LORA",
-      seoDescription: "Historical photos, landmarks, and famous figures connected to Jabal Al-Luweibdeh.",
+      seoTitle: "Photo Gallery | Jabal Al-Luweibdeh Heritage Photos",
+      seoDescription: "Browse L.O.R.A's photo gallery of Jabal Al-Luweibdeh historical pictures, landmarks, public spaces, and famous figures.",
       status: "PUBLISHED",
       sections: [
         {
@@ -670,8 +671,8 @@ export const fallbackPages: Record<LocaleCode, Record<string, CmsPage>> = {
       locale: "en",
       slug: "neighborhood-archive",
       title: "Neighborhood Archive",
-      seoTitle: "Neighborhood Archive - LORA",
-      seoDescription: "A searchable library of neighborhood names, photos, videos, and memory fragments from Jabal Al-Luweibdeh.",
+      seoTitle: "Neighborhood Archive | Jabal Al-Luweibdeh Memory Library",
+      seoDescription: "Search L.O.R.A's neighborhood archive of Jabal Al-Luweibdeh names, photos, videos, labels, and memory fragments.",
       status: "PUBLISHED",
       sections: [
         {
@@ -864,3 +865,4 @@ export const fallbackPages: Record<LocaleCode, Record<string, CmsPage>> = {
     },
   },
 };
+

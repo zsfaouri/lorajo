@@ -4,6 +4,7 @@
 .postgres.log
 .next
 node_modules
+tmp
 FINAL PIC
 founders
 founding members

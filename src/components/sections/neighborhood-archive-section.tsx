@@ -133,8 +133,14 @@ export function NeighborhoodArchiveSection({
                       <span className="absolute left-3 top-3 rounded-full bg-white/88 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-black">
                         {item.mediaType === "VIDEO" ? "Video" : "Picture"}
                       </span>
+                      {item.folder ? (
+                        <span className="absolute bottom-3 left-3 rounded-full bg-black/62 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-white">
+                          {item.folder}
+                        </span>
+                      ) : null}
                     </div>
                     <div className="grid gap-2 p-4">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-heritage-green)]">Label</p>
                       <h2 className="text-xl font-medium leading-tight text-black">{item.name}</h2>
                       {item.text ? <p className="text-sm leading-6 text-black/58">{item.text}</p> : null}
                     </div>
