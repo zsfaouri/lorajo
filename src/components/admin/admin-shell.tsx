@@ -101,7 +101,7 @@ export function AdminShell({ children, className }: { children: React.ReactNode;
             <Image src="/lora/brand/lora-logo.png" alt="LORA logo" width={44} height={44} className="h-11 w-11 rounded-full object-contain" priority />
           </span>
           <span>
-            <span className="block text-2xl font-semibold leading-none">LORA</span>
+            <span className="block text-2xl font-semibold leading-none">L.O.R.A</span>
             <span className="mt-1 block text-xs uppercase tracking-[0.16em] text-black/45">Luweibdeh admin</span>
           </span>
         </Link>
@@ -134,9 +134,9 @@ export function AdminShell({ children, className }: { children: React.ReactNode;
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-black/10 bg-[var(--color-soft-white)]/86 px-5 backdrop-blur">
           <div className="flex items-center gap-3">
             <Image src="/lora/brand/lora-logo.png" alt="LORA logo" width={32} height={32} className="h-8 w-8 rounded-full object-contain lg:hidden" />
-            <p className="text-sm uppercase tracking-[0.16em] text-black/45">LORA admin panel</p>
+            <p className="text-sm uppercase tracking-[0.16em] text-black/45">L.O.R.A admin panel</p>
           </div>
-          <Link href="/en" className="rounded-full border border-[var(--color-heritage-green)] px-4 py-2 text-sm text-[var(--color-heritage-green)] transition-colors hover:bg-[var(--color-heritage-green)] hover:text-white">
+          <Link href="/en/who-we-are" className="rounded-full border border-[var(--color-heritage-green)] px-4 py-2 text-sm text-[var(--color-heritage-green)] transition-colors hover:bg-[var(--color-heritage-green)] hover:text-white">
             View site
           </Link>
         </header>

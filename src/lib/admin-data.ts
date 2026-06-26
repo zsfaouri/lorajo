@@ -154,7 +154,7 @@ export async function listAdminMedia() {
   if (!prisma) return [];
   try {
     return await prisma.mediaAsset.findMany({
-      where: { type: { in: ["IMAGE", "VIDEO"] }, source: "google drive" },
+      where: { type: { in: ["IMAGE", "VIDEO"] }, source: { contains: "google drive", mode: "insensitive" } },
       select: { id: true, url: true, alt: true, caption: true, source: true, metadata: true },
       orderBy: { createdAt: "desc" },
     });

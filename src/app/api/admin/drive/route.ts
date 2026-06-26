@@ -4,6 +4,20 @@ import { createGoogleDriveFolder, listGoogleDriveFolder } from "@/lib/google-dri
 
 export const dynamic = "force-dynamic";
 
+async function withTimeout<T>(promise: Promise<T>, timeoutMs = 12000): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_resolve, reject) => {
+        timeout = setTimeout(() => reject(new Error("Google Drive request timed out.")), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
 export async function GET(request: Request) {
   const session = await requireAdminApi();
   if (!session) return error("Unauthorized", 401);
@@ -16,7 +30,7 @@ export async function GET(request: Request) {
     return ok({
       folderId,
       rootFolderId: process.env.GOOGLE_DRIVE_FOLDER_ID || DRIVE_ROOT_FOLDER_ID,
-      items: await listGoogleDriveFolder(folderId, refreshKey),
+      items: await withTimeout(listGoogleDriveFolder(folderId, refreshKey)),
     });
   } catch (caught) {
     return error(caught instanceof Error ? caught.message : "Could not read Google Drive folder.", 503);

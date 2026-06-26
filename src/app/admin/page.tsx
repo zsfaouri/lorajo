@@ -1,87 +1,46 @@
-import { Archive, CalendarDays, ContactRound, FileText, FolderPlus, GalleryHorizontalEnd, Images, Landmark, Users } from "lucide-react";
+import { Archive, ExternalLink, FileText, FolderSync, GalleryHorizontalEnd, Images, UserRoundCog, Users } from "lucide-react";
 
+import { AdminSystemTestPanel } from "@/components/admin/admin-system-test-panel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getGalleryCollections, getMembers, getPagesForAdmin } from "@/lib/cms-data";
 import { requireAdmin } from "@/lib/admin-auth";
 
-const publishWorkflows = [
-  {
-    title: "Create New Page",
-    description: "Create pages, edit existing pages, add text, photos, videos, forms, events, and announcement sections.",
-    href: "/admin/pages",
-    icon: FileText,
-  },
+const contentWorkflows = [
   {
     title: "Who We Are",
-    description: "Open the Who We Are page editor. Edit text, media, sections, forms, and layout.",
-    href: "/admin/who-we-are",
-    icon: ContactRound,
-  },
-  {
-    title: "What We Do",
-    description: "Open the What We Do page editor. Edit images, copy, videos, and page sections.",
-    href: "/admin/what-we-do",
-    icon: GalleryHorizontalEnd,
-  },
-  {
-    title: "Events",
-    description: "Create events with title, date, Drive image, video, invitation link, location, and details.",
-    href: "/admin/events",
-    icon: CalendarDays,
-  },
-  {
-    title: "Announcements",
-    description: "Create announcements that can be surfaced on pages.",
-    href: "/admin/announcements",
+    description: "Merged page for Who We Are, What We Do, and Founding Members.",
+    adminHref: "/admin/who-we-are",
+    liveHref: "/en/who-we-are",
     icon: FileText,
   },
   {
-    title: "Founding Members",
-    description: "Create and edit founding member profiles and portraits.",
-    href: "/admin/members",
-    icon: Users,
-  },
-];
-
-const mediaWorkflows = [
-  {
-    title: "Image Cloud",
-    description: "Sync and manage Google Drive image folders.",
-    href: "/admin/media",
-    icon: FolderPlus,
-  },
-  {
-    title: "Famous Figures",
-    description: "Edit profile images and captions shown in the Famous Figures gallery.",
-    href: "/admin/media?folder=famous-figures",
-    icon: Users,
-  },
-  {
-    title: "Landmarks",
-    description: "Edit landmark photos and text from the Drive folder.",
-    href: "/admin/media?folder=landmarks",
-    icon: Landmark,
-  },
-  {
-    title: "Historical Pics",
-    description: "Edit historical photo entries from the Drive folder.",
-    href: "/admin/media?folder=historical-photos",
+    title: "Photo Gallery",
+    description: "Public gallery categories. Images come from synced Google Drive folders.",
+    adminHref: "/admin/media",
+    liveHref: "/en/photo-gallery",
     icon: Images,
   },
   {
     title: "Neighborhood Archive",
-    description: "Edit archive pictures, videos, labels, and text from the Drive folder.",
-    href: "/admin/media?folder=neighborhood-archive",
+    description: "Pictures, videos, labels, and text from the Drive archive folder.",
+    adminHref: "/admin/media?folder=neighborhood-archive",
+    liveHref: "/en/neighborhood-archive",
     icon: Archive,
-    secondaryHref: "/admin/pages",
-    secondaryLabel: "Edit page title",
   },
   {
-    title: "Hero Gallery",
-    description: "Edit hero images separately from the public photo gallery.",
-    href: "/admin/hero-pics",
-    icon: Images,
+    title: "Join Us",
+    description: "Membership form and application endpoint.",
+    adminHref: "/admin/pages",
+    liveHref: "/en/join-us",
+    icon: UserRoundCog,
   },
+];
+
+const mediaWorkflows = [
+  { title: "Sync all Drive folders", href: "/admin/media", description: "Refresh Google Drive folders into website categories.", icon: FolderSync },
+  { title: "Historical Pics", href: "/admin/media?folder=historical-photos", description: "Edit historical gallery labels and captions.", icon: Images },
+  { title: "Landmarks", href: "/admin/media?folder=landmarks", description: "Edit landmark gallery labels and captions.", icon: GalleryHorizontalEnd },
+  { title: "Famous Figures", href: "/admin/media?folder=famous-figures", description: "Edit famous figure cards.", icon: Users },
 ];
 
 export default async function AdminDashboardPage() {
@@ -91,86 +50,103 @@ export default async function AdminDashboardPage() {
     getMembers("en"),
     getGalleryCollections("en"),
   ]);
-
-  const stats = [
-    { label: "Pages", value: pages.length },
-    { label: "Founding members", value: members.length },
-    { label: "Drive tabs", value: collections.length },
-    { label: "Mode", value: "Draft / Live" },
-  ];
+  const publicImages = collections.reduce((count, collection) => count + collection.images.length, 0);
 
   return (
-    <div className="grid gap-6">
-      <div>
-        <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-heritage-green)]">Dashboard</p>
-        <h1 className="mt-3 text-4xl font-medium">Admin workspace</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-black/55">
-          Use the panels below. Each panel maps to one public-site job.
-        </p>
-      </div>
+    <div className="grid gap-7">
+      <section className="grid gap-5 rounded-lg border border-black/10 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-heritage-green)]">L.O.R.A Admin</p>
+            <h1 className="mt-3 text-4xl font-medium text-black md:text-5xl">Website control room</h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-black/58">
+              Edit the public website from one place. Page text is stored in the CMS database. Images and videos must come from Google Drive.
+            </p>
+          </div>
+          <a
+            href="/en/who-we-are"
+            target="_blank"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-[var(--radius-button)] border border-[var(--color-heritage-green)] px-5 text-sm font-medium text-[var(--color-heritage-green)] transition-colors hover:bg-[var(--color-heritage-green)] hover:text-white"
+          >
+            <ExternalLink size={16} />
+            Open live site
+          </a>
+        </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        {stats.map((stat) => (
-          <Card key={stat.label} className="border-black/10 bg-white/70 text-black shadow-sm">
-            <CardHeader>
-              <CardDescription className="text-black/45">{stat.label}</CardDescription>
-              <CardTitle className="text-3xl">{stat.value}</CardTitle>
-            </CardHeader>
-          </Card>
-        ))}
-      </div>
+        <div className="grid gap-3 md:grid-cols-4">
+          <Stat label="CMS pages" value={pages.length} />
+          <Stat label="Drive categories" value={collections.length} />
+          <Stat label="Public images" value={publicImages} />
+          <Stat label="Founding members" value={members.length} />
+        </div>
+      </section>
 
-      <WorkflowGroup title="Publish content" items={publishWorkflows} />
-      <WorkflowGroup title="Manage media" items={mediaWorkflows} />
-    </div>
-  );
-}
+      <AdminSystemTestPanel />
 
-function WorkflowGroup({
-  title,
-  items,
-}: {
-  title: string;
-  items: Array<{
-    title: string;
-    description: string;
-    href: string;
-    icon: typeof FileText;
-    secondaryHref?: string;
-    secondaryLabel?: string;
-  }>;
-}) {
-  return (
-    <section className="grid gap-4">
-      <h2 className="text-xl font-medium text-black">{title}</h2>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {items.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Card key={item.title} className="h-full border-black/10 bg-white/70 text-black shadow-sm transition-colors hover:border-[var(--color-heritage-green)]/35 hover:bg-white">
-              <a href={item.href} className="block">
+      <section className="grid gap-4">
+        <div>
+          <h2 className="text-xl font-medium text-black">Live website sections</h2>
+          <p className="mt-1 text-sm text-black/55">Each card has an admin editor and the matching public page.</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {contentWorkflows.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Card key={item.title} className="border-black/10 bg-white text-black shadow-sm">
                 <CardHeader>
                   <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[var(--color-heritage-green)] text-white">
                     <Icon size={18} />
                   </div>
                   <CardTitle className="pt-2">{item.title}</CardTitle>
-                  <CardDescription className="text-black/55">{item.description}</CardDescription>
+                  <CardDescription>{item.description}</CardDescription>
                 </CardHeader>
-              </a>
-              <CardContent className="flex flex-wrap gap-3">
-                <a href={item.href} className="text-sm text-[var(--color-heritage-green)]">
-                  Open
-                </a>
-                {item.secondaryHref ? (
-                  <a href={item.secondaryHref} className="text-sm text-black/60 underline underline-offset-4">
-                    {item.secondaryLabel}
+                <CardContent className="flex flex-wrap gap-3">
+                  <a className="text-sm font-medium text-[var(--color-heritage-green)]" href={item.adminHref}>
+                    Edit
                   </a>
-                ) : null}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-    </section>
+                  <a className="text-sm text-black/58 underline underline-offset-4" href={item.liveHref} target="_blank">
+                    View live
+                  </a>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="grid gap-4">
+        <div>
+          <h2 className="text-xl font-medium text-black">Google Drive media</h2>
+          <p className="mt-1 text-sm text-black/55">Use these panels for image and video content. Local-only media is not the source of truth.</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {mediaWorkflows.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Card key={item.title} className="border-black/10 bg-white text-black shadow-sm">
+                <a href={item.href} className="block">
+                  <CardHeader>
+                    <div className="flex h-10 w-10 items-center justify-center rounded-md bg-black text-white">
+                      <Icon size={18} />
+                    </div>
+                    <CardTitle className="pt-2">{item.title}</CardTitle>
+                    <CardDescription>{item.description}</CardDescription>
+                  </CardHeader>
+                </a>
+              </Card>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-md border border-black/10 bg-[var(--color-soft-white)] p-4">
+      <p className="text-xs uppercase tracking-[0.16em] text-black/42">{label}</p>
+      <p className="mt-2 text-3xl font-medium text-black">{value}</p>
+    </div>
   );
 }

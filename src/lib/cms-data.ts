@@ -62,6 +62,24 @@ function galleryTitleForSlug(slug: string, title: string) {
 
 const publicGallerySlugs = ["famous-figures", "historical-photos", "landmarks"];
 
+function isGoogleDriveSource(source: string | null | undefined) {
+  return source?.toLowerCase().includes("google drive") ?? false;
+}
+
+async function withPublicTimeout<T>(promise: Promise<T>, fallback: T, timeoutMs = 4000): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((resolve) => {
+        timeout = setTimeout(() => resolve(fallback), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
 function localizedMemberBio(value: unknown, locale: LocaleCode) {
   if (typeof value === "string" && value.trim()) return value;
   const bio = asRecord(value);
@@ -293,7 +311,7 @@ export async function getGalleryCollections(locale: LocaleCode): Promise<Gallery
   const prisma = getPrisma();
 
   async function driveFallback() {
-    const driveCollections = await getDriveGalleryCollections().catch(() => []);
+    const driveCollections = await withPublicTimeout(getDriveGalleryCollections().catch(() => []), []);
     return driveCollections.length > 0 ? driveCollections : fallbackGallery;
   }
 
@@ -317,11 +335,13 @@ export async function getGalleryCollections(locale: LocaleCode): Promise<Gallery
       slug: collection.slug,
       description: collection.description,
       sortOrder: collection.sortOrder,
-      images: collection.images.map((image) => ({
-        src: image.mediaAsset.url,
-        alt: image.alt,
-        caption: image.caption ?? image.mediaAsset.caption ?? undefined,
-      })),
+      images: collection.images
+        .filter((image) => isGoogleDriveSource(image.mediaAsset.source))
+        .map((image) => ({
+          src: image.mediaAsset.url,
+          alt: image.alt,
+          caption: image.caption ?? image.mediaAsset.caption ?? undefined,
+        })),
     }));
 
     if (databaseCollections.length > 0) return databaseCollections;
@@ -334,8 +354,11 @@ export async function getGalleryCollections(locale: LocaleCode): Promise<Gallery
 export async function getNeighborhoodArchiveItems(locale: LocaleCode): Promise<NeighborhoodArchiveItem[]> {
   noStore();
   const prisma = getPrisma();
-  const driveItems = await getDriveNeighborhoodArchiveItems().catch(() => []);
-  if (!prisma) return driveItems.length > 0 ? driveItems : fallbackNeighborhoodArchive;
+  const driveFallback = () => withPublicTimeout(getDriveNeighborhoodArchiveItems().catch(() => []), []);
+  if (!prisma) {
+    const driveItems = await driveFallback();
+    return driveItems.length > 0 ? driveItems : fallbackNeighborhoodArchive;
+  }
 
   try {
     const collection = await prisma.galleryCollection.findUnique({
@@ -349,7 +372,7 @@ export async function getNeighborhoodArchiveItems(locale: LocaleCode): Promise<N
     });
 
     const databaseItems =
-      collection?.images.map((item) => {
+      collection?.images.filter((item) => isGoogleDriveSource(item.mediaAsset.source)).map((item) => {
         const metadata = asRecord(item.mediaAsset.metadata);
         const thumbnail = typeof metadata.thumbnailUrl === "string" ? metadata.thumbnailUrl : item.mediaAsset.publicId ? `https://drive.google.com/thumbnail?id=${encodeURIComponent(item.mediaAsset.publicId)}&sz=w2000` : null;
         return {
@@ -363,8 +386,11 @@ export async function getNeighborhoodArchiveItems(locale: LocaleCode): Promise<N
         } satisfies NeighborhoodArchiveItem;
       }) ?? [];
 
-    return databaseItems.length > 0 ? databaseItems : driveItems.length > 0 ? driveItems : fallbackNeighborhoodArchive;
+    if (databaseItems.length > 0) return databaseItems;
+    const driveItems = await driveFallback();
+    return driveItems.length > 0 ? driveItems : fallbackNeighborhoodArchive;
   } catch {
+    const driveItems = await driveFallback();
     return driveItems.length > 0 ? driveItems : fallbackNeighborhoodArchive;
   }
 }
