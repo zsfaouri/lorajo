@@ -105,7 +105,7 @@ export function MergedWhoWeArePage({ locale, whoPage, whatPage, members }: Props
 
       <section className="lora-merged-split">
         <div className="lora-merged-media lora-merged-reveal"><Image src={gallery[1]?.src ?? fallbackImages[1].src} alt={gallery[1]?.alt ?? "Luweibdeh public space"} fill sizes="(min-width: 900px) 52vw, 100vw" /><span>{gallery[1]?.caption ?? "Jabal Al-Luweibdeh"}</span></div>
-        <div className="lora-merged-copy"><p className="lora-merged-eyebrow lora-merged-reveal">01 / Identity</p><h2 className="lora-merged-reveal">{identityTitle}</h2>{whoParagraphs.slice(0, 3).map((paragraph) => <p className="lora-merged-reveal" key={paragraph}>{paragraph}</p>)}<div className="lora-merged-meta lora-merged-reveal"><div><strong>2024</strong><span>Established</span></div><div><strong>{visibleMembers.length || 12}</strong><span>Founders</span></div><div><strong>3</strong><span>Public tabs</span></div></div></div>
+        <div className="lora-merged-copy"><p className="lora-merged-eyebrow lora-merged-reveal">01 / Identity</p><h2 className="lora-merged-reveal">{identityTitle}</h2>{whoParagraphs.slice(0, 3).map((paragraph) => <p className="lora-merged-reveal" key={paragraph}>{paragraph}</p>)}<div className="lora-merged-meta lora-merged-reveal"><div><strong>2024</strong><span>Established</span></div></div></div>
       </section>
 
       <section className="lora-merged-split lora-merged-split--reverse" id="work">
