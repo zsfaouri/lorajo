@@ -89,6 +89,7 @@ export default async function CmsRoute({
   const { locale: rawLocale, slug: rawSlug } = await params;
   const locale = normalizeLocale(rawLocale);
   const slug = normalizeSlug(rawSlug);
+  if (slug === "home") redirect(`/${locale}/who-we-are`);
   if (slug === "what-we-do" || slug === "founding-members") redirect(`/${locale}/who-we-are`);
 
   if (slug === "join-us") {
