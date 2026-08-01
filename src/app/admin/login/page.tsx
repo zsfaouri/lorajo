@@ -1,57 +1,93 @@
-import { AuthError } from "next-auth";
-import { redirect } from "next/navigation";
+"use client";
 
-import { auth, signIn } from "@/auth";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useState, FormEvent } from "react";
+import { useRouter } from "next/navigation";
 
-async function login(formData: FormData) {
-  "use server";
+export default function AdminLoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  try {
-    await signIn("credentials", {
-      email: formData.get("email"),
-      password: formData.get("password"),
-      redirectTo: "/admin",
-    });
-  } catch (error) {
-    if (error instanceof AuthError) {
-      redirect("/admin/login?error=CredentialsSignin");
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/admin/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (data.ok) {
+        router.push("/admin");
+      } else {
+        setError(data.error || "Login failed");
+      }
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    throw error;
   }
-}
-
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string }>;
-}) {
-  const session = await auth();
-  if (session?.user) redirect("/admin");
-  const { error } = await searchParams;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#080808] px-4 text-white">
-      <form action={login} className="w-full max-w-md rounded-md border border-white/10 bg-white/[0.04] p-6">
-        <p className="text-xs uppercase tracking-[0.18em] text-white/40">LORA CMS</p>
-        <h1 className="mt-3 text-3xl font-medium">Secure login</h1>
-        <div className="mt-8 grid gap-4">
-          <div className="grid gap-2">
-            <Label className="text-white/55">Email</Label>
-            <Input name="email" type="email" required className="border-white/15 bg-white/8 text-white" />
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
+      <div className="bg-white rounded-lg shadow p-8 w-full max-w-md">
+        <h1 className="text-2xl font-bold text-center text-gray-900 mb-6">
+          LORA Admin
+        </h1>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="bg-red-50 text-red-600 text-sm rounded-md p-3">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="admin@example.com"
+            />
           </div>
-          <div className="grid gap-2">
-            <Label className="text-white/55">Password</Label>
-            <Input name="password" type="password" required className="border-white/15 bg-white/8 text-white" />
+
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
           </div>
-          {error ? <p className="text-sm text-[var(--color-terracotta)]">Invalid credentials.</p> : null}
-          <Button type="submit" variant="admin" className="mt-2">
-            Login
-          </Button>
-        </div>
-      </form>
-    </main>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full px-4 py-2 rounded text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }

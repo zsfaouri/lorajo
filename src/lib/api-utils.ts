@@ -2,12 +2,8 @@ import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 
-import { auth } from "@/auth";
+import { getSession } from "@/lib/auth";
 import { getPrisma } from "@/lib/prisma";
-
-function isAdminRole(role: string | null | undefined) {
-  return role?.toLowerCase() === "admin";
-}
 
 export function ok<T>(data: T, init?: ResponseInit) {
   const response = NextResponse.json(data, init);
@@ -22,9 +18,8 @@ export function error(message: string, status = 400) {
 }
 
 export async function requireAdminApi() {
-  const session = await auth();
-  if (!session?.user) return null;
-  if (!isAdminRole(session.user.role)) return null;
+  const session = await getSession();
+  if (!session) return null;
   return session;
 }
 

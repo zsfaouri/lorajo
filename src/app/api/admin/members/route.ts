@@ -1,40 +1,57 @@
-import { Locale, Prisma, PublishState } from "@prisma/client";
+import { NextRequest } from "next/server";
+import { withAdmin, parseBody, slugify, logAudit } from "@/lib/api-helpers";
 
-import { error, ok, parseJson, requireAdminApi, requirePrisma } from "@/lib/api-utils";
-import { memberSchema } from "@/lib/validations";
-
-export async function GET() {
-  const session = await requireAdminApi();
-  if (!session) return error("Unauthorized", 401);
-  const prisma = requirePrisma();
-  if (!prisma) return error("Database is not configured", 503);
-  return ok(await prisma.member.findMany({ include: { mediaAsset: true }, orderBy: [{ locale: "asc" }, { sortOrder: "asc" }] }));
+export async function GET(req: NextRequest) {
+  const locale = req.nextUrl.searchParams.get("locale");
+  return withAdmin(async ({ prisma }) => {
+    return prisma.member.findMany({
+      where: locale ? { locale: locale as any } : undefined,
+      orderBy: { sortOrder: "asc" },
+      include: { mediaAsset: true },
+    });
+  });
 }
 
-export async function POST(request: Request) {
-  const session = await requireAdminApi();
-  if (!session) return error("Unauthorized", 401);
-  const prisma = requirePrisma();
-  if (!prisma) return error("Database is not configured", 503);
-  const { data, response } = await parseJson(request, memberSchema);
-  if (response) return response;
+export async function POST(req: NextRequest) {
+  return withAdmin(async ({ prisma, email }) => {
+    const body = await parseBody<{
+      locale: string;
+      name: string;
+      slug?: string;
+      title?: string;
+      bio?: any;
+      sortOrder?: number;
+      isFounder?: boolean;
+      status?: string;
+      mediaAssetId?: string;
+    }>(req);
 
-  const memberData: Prisma.MemberUncheckedCreateInput = {
-    locale: data.locale as Locale,
-    name: data.name,
-    slug: data.slug,
-    title: data.title,
-    bio: data.bio ?? Prisma.JsonNull,
-    mediaAssetId: data.mediaAssetId,
-    sortOrder: data.sortOrder,
-    isFounder: data.isFounder,
-    status: data.status as PublishState,
-  };
+    const slug = body.slug || slugify(body.name);
 
-  const member = await prisma.member.create({
-    data: memberData,
-    include: { mediaAsset: true },
+    let sortOrder = body.sortOrder;
+    if (sortOrder === undefined) {
+      const last = await prisma.member.findFirst({
+        where: { locale: body.locale as any },
+        orderBy: { sortOrder: "desc" },
+        select: { sortOrder: true },
+      });
+      sortOrder = (last?.sortOrder ?? -1) + 1;
+    }
+
+    const member = await prisma.member.create({
+      data: {
+        locale: body.locale as any,
+        name: body.name,
+        slug,
+        title: body.title,
+        bio: body.bio,
+        sortOrder,
+        isFounder: body.isFounder ?? false,
+        status: (body.status as any) || "DRAFT",
+        mediaAssetId: body.mediaAssetId,
+      },
+    });
+    await logAudit(prisma, { action: "CREATE", entity: "Member", entityId: member.id, after: member, metadata: { email } });
+    return member;
   });
-  await prisma.auditLog.create({ data: { userId: session.user?.id, action: "create", entity: "Member", entityId: member.id } });
-  return ok(member, { status: 201 });
 }

@@ -1,35 +1,61 @@
-import { error, jsonInput, ok, parseJson, requireAdminApi, requirePrisma } from "@/lib/api-utils";
-import { sectionSchema } from "@/lib/validations";
+import { NextRequest } from "next/server";
+import { withAdmin, parseBody } from "@/lib/api-helpers";
 
-export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
-  const session = await requireAdminApi();
-  if (!session) return error("Unauthorized", 401);
-
-  const prisma = requirePrisma();
-  if (!prisma) return error("Database is not configured", 503);
-
-  const { id } = await context.params;
-  const { data, response } = await parseJson(request, sectionSchema);
-  if (response) return response;
-
-  const section = await prisma.pageSection.create({
-    data: {
-      pageId: id,
-      type: data.type,
-      variant: data.variant,
-      sortOrder: data.sortOrder,
-      isVisible: data.isVisible,
-      content: jsonInput(data.content),
-      settings: jsonInput(data.settings),
-      spacing: data.spacing ? jsonInput(data.spacing) : undefined,
-      background: data.background ? jsonInput(data.background) : undefined,
-      alignment: data.alignment,
-    },
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  return withAdmin(async ({ prisma }) => {
+    return prisma.pageSection.findMany({
+      where: { pageId: id },
+      orderBy: { sortOrder: "asc" },
+      include: { blocks: { orderBy: { sortOrder: "asc" } } },
+    });
   });
+}
 
-  await prisma.auditLog.create({
-    data: { userId: session.user?.id, action: "create", entity: "PageSection", entityId: section.id },
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  return withAdmin(async ({ prisma }) => {
+    const body = await parseBody<{
+      type: string;
+      variant: string;
+      content: any;
+      settings: any;
+      sortOrder?: number;
+      isVisible?: boolean;
+      spacing?: any;
+      background?: any;
+      alignment?: string;
+    }>(req);
+
+    let sortOrder = body.sortOrder;
+    if (sortOrder === undefined) {
+      const last = await prisma.pageSection.findFirst({
+        where: { pageId: id },
+        orderBy: { sortOrder: "desc" },
+        select: { sortOrder: true },
+      });
+      sortOrder = (last?.sortOrder ?? -1) + 1;
+    }
+
+    return prisma.pageSection.create({
+      data: {
+        pageId: id,
+        type: body.type,
+        variant: body.variant,
+        content: body.content,
+        settings: body.settings,
+        sortOrder,
+        isVisible: body.isVisible ?? true,
+        spacing: body.spacing,
+        background: body.background,
+        alignment: body.alignment,
+      },
+    });
   });
-
-  return ok(section, { status: 201 });
 }

@@ -1,46 +1,52 @@
-import { PublishState } from "@prisma/client";
+import { NextRequest } from "next/server";
+import { withAdmin, parseBody, slugify, logAudit } from "@/lib/api-helpers";
 
-import { auditPayload, error, ok, parseJson, requireAdminApi, requirePrisma } from "@/lib/api-utils";
-import { DRIVE_PAGES_FOLDER_ID } from "@/lib/drive-folders";
-import { createGoogleDriveFolder } from "@/lib/google-drive";
-import { pageSchema } from "@/lib/validations";
-
-export async function GET() {
-  const session = await requireAdminApi();
-  if (!session) return error("Unauthorized", 401);
-
-  const prisma = requirePrisma();
-  if (!prisma) return error("Database is not configured", 503);
-
-  return ok(await prisma.page.findMany({ include: { sections: { orderBy: { sortOrder: "asc" } } }, orderBy: [{ locale: "asc" }, { slug: "asc" }] }));
+export async function GET(req: NextRequest) {
+  const locale = req.nextUrl.searchParams.get("locale");
+  return withAdmin(async ({ prisma }) => {
+    const pages = await prisma.page.findMany({
+      where: locale ? { locale: locale as any } : undefined,
+      select: {
+        id: true,
+        locale: true,
+        slug: true,
+        title: true,
+        status: true,
+        updatedAt: true,
+        _count: { select: { sections: true } },
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+    return pages.map((p: any) => ({
+      ...p,
+      sectionCount: p._count.sections,
+      _count: undefined,
+    }));
+  });
 }
 
-export async function POST(request: Request) {
-  const session = await requireAdminApi();
-  if (!session) return error("Unauthorized", 401);
-
-  const prisma = requirePrisma();
-  if (!prisma) return error("Database is not configured", 503);
-
-  const { data, response } = await parseJson(request, pageSchema);
-  if (response) return response;
-
-  let page = await prisma.page.create({
-    data: {
-      ...data,
-      status: data.status as PublishState,
-      publishedAt: data.status === "PUBLISHED" ? new Date() : null,
-    },
+export async function POST(req: NextRequest) {
+  return withAdmin(async ({ prisma, email }) => {
+    const body = await parseBody<{
+      locale: string;
+      slug?: string;
+      title: string;
+      seoTitle?: string;
+      seoDescription?: string;
+      status?: string;
+    }>(req);
+    const slug = body.slug || slugify(body.title);
+    const page = await prisma.page.create({
+      data: {
+        locale: body.locale as any,
+        slug,
+        title: body.title,
+        seoTitle: body.seoTitle,
+        seoDescription: body.seoDescription,
+        status: (body.status as any) || "DRAFT",
+      },
+    });
+    await logAudit(prisma, { action: "CREATE", entity: "Page", entityId: page.id, after: page, metadata: { email } });
+    return page;
   });
-
-  const folder = await createGoogleDriveFolder(page.title, DRIVE_PAGES_FOLDER_ID).catch(() => null);
-  if (folder) {
-    page = await prisma.page.update({ where: { id: page.id }, data: { driveFolderId: folder.id } });
-  }
-
-  await prisma.auditLog.create({
-    data: { userId: session.user?.id, action: "create", entity: "Page", entityId: page.id, after: auditPayload(page) },
-  });
-
-  return ok(page, { status: 201 });
 }

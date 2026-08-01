@@ -1,41 +1,48 @@
-import { PublishState } from "@prisma/client";
+import { NextRequest } from "next/server";
+import { withAdmin, parseBody, slugify, logAudit } from "@/lib/api-helpers";
 
-import { error, jsonInput, ok, parseJson, requireAdminApi, requirePrisma } from "@/lib/api-utils";
-import { DRIVE_ANNOUNCEMENTS_FOLDER_ID } from "@/lib/drive-folders";
-import { createGoogleDriveFolder } from "@/lib/google-drive";
-import { contentEntrySchema } from "@/lib/validations";
-
-export async function GET() {
-  const session = await requireAdminApi();
-  if (!session) return error("Unauthorized", 401);
-  const prisma = requirePrisma();
-  if (!prisma) return error("Database is not configured", 503);
-  return ok(await prisma.article.findMany({ orderBy: { createdAt: "desc" } }));
+export async function GET(req: NextRequest) {
+  const locale = req.nextUrl.searchParams.get("locale");
+  return withAdmin(async ({ prisma }) => {
+    return prisma.article.findMany({
+      where: locale ? { locale: locale as any } : undefined,
+      orderBy: { publishedAt: "desc" },
+      include: { mediaAsset: true },
+    });
+  });
 }
 
-export async function POST(request: Request) {
-  const session = await requireAdminApi();
-  if (!session) return error("Unauthorized", 401);
-  const prisma = requirePrisma();
-  if (!prisma) return error("Database is not configured", 503);
-  const { data, response } = await parseJson(request, contentEntrySchema);
-  if (response) return response;
+export async function POST(req: NextRequest) {
+  return withAdmin(async ({ prisma, email }) => {
+    const body = await parseBody<{
+      locale: string;
+      title: string;
+      slug?: string;
+      excerpt?: string;
+      content?: any;
+      author?: string;
+      driveFolderId?: string;
+      status?: string;
+      publishedAt?: string;
+      mediaAssetId?: string;
+    }>(req);
 
-  let article = await prisma.article.create({
-    data: {
-      locale: data.locale,
-      title: data.title,
-      slug: data.slug,
-      excerpt: data.summary,
-      content: jsonInput(data.content),
-      status: data.status as PublishState,
-      publishedAt: data.status === "PUBLISHED" ? new Date() : null,
-    },
+    const slug = body.slug || slugify(body.title);
+    const article = await prisma.article.create({
+      data: {
+        locale: body.locale as any,
+        title: body.title,
+        slug,
+        excerpt: body.excerpt,
+        content: body.content ?? {},
+        author: body.author,
+        driveFolderId: body.driveFolderId,
+        status: (body.status as any) || "DRAFT",
+        publishedAt: body.publishedAt ? new Date(body.publishedAt) : undefined,
+        mediaAssetId: body.mediaAssetId,
+      },
+    });
+    await logAudit(prisma, { action: "CREATE", entity: "Article", entityId: article.id, after: article, metadata: { email } });
+    return article;
   });
-  const folder = await createGoogleDriveFolder(article.title, DRIVE_ANNOUNCEMENTS_FOLDER_ID).catch(() => null);
-  if (folder) {
-    article = await prisma.article.update({ where: { id: article.id }, data: { driveFolderId: folder.id } });
-  }
-  await prisma.auditLog.create({ data: { userId: session.user?.id, action: "create", entity: "Article", entityId: article.id } });
-  return ok(article, { status: 201 });
 }

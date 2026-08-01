@@ -1,32 +1,47 @@
-import { PublishState } from "@prisma/client";
+import { NextRequest } from "next/server";
+import { withAdmin, parseBody, logAudit } from "@/lib/api-helpers";
 
-import { error, ok, parseJson, requireAdminApi, requirePrisma } from "@/lib/api-utils";
-import { collectionSchema } from "@/lib/validations";
-
-export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
-  const session = await requireAdminApi();
-  if (!session) return error("Unauthorized", 401);
-  const prisma = requirePrisma();
-  if (!prisma) return error("Database is not configured", 503);
-  const { id } = await context.params;
-  const { data, response } = await parseJson(request, collectionSchema.partial());
-  if (response) return response;
-
-  const collection = await prisma.galleryCollection.update({
-    where: { id },
-    data: { ...data, status: data.status as PublishState | undefined },
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  return withAdmin(async ({ prisma }) => {
+    return prisma.galleryCollection.findUniqueOrThrow({
+      where: { id },
+      include: {
+        images: {
+          orderBy: { sortOrder: "asc" },
+          include: { mediaAsset: true },
+        },
+      },
+    });
   });
-  await prisma.auditLog.create({ data: { userId: session.user?.id, action: "update", entity: "GalleryCollection", entityId: id } });
-  return ok(collection);
 }
 
-export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
-  const session = await requireAdminApi();
-  if (!session) return error("Unauthorized", 401);
-  const prisma = requirePrisma();
-  if (!prisma) return error("Database is not configured", 503);
-  const { id } = await context.params;
-  await prisma.galleryCollection.delete({ where: { id } });
-  await prisma.auditLog.create({ data: { userId: session.user?.id, action: "delete", entity: "GalleryCollection", entityId: id } });
-  return ok({ deleted: true });
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  return withAdmin(async ({ prisma, email }) => {
+    const before = await prisma.galleryCollection.findUniqueOrThrow({ where: { id } });
+    const body = await parseBody<Record<string, any>>(req);
+    const collection = await prisma.galleryCollection.update({ where: { id }, data: body });
+    await logAudit(prisma, { action: "UPDATE", entity: "GalleryCollection", entityId: id, before, after: collection, metadata: { email } });
+    return collection;
+  });
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  return withAdmin(async ({ prisma, email }) => {
+    const before = await prisma.galleryCollection.findUniqueOrThrow({ where: { id } });
+    await prisma.galleryCollection.delete({ where: { id } });
+    await logAudit(prisma, { action: "DELETE", entity: "GalleryCollection", entityId: id, before, metadata: { email } });
+    return { deleted: true };
+  });
 }

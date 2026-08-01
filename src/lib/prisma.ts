@@ -30,3 +30,9 @@ export function getPrisma() {
 
   return globalForPrisma.prisma;
 }
+
+export function requirePrisma() {
+  const prisma = getPrisma();
+  if (!prisma) throw new Error("DATABASE_URL not configured");
+  return prisma;
+}

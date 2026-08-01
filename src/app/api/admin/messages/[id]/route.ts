@@ -1,17 +1,42 @@
-import { z } from "zod";
+import { NextRequest } from "next/server";
+import { withAdmin, parseBody, logAudit } from "@/lib/api-helpers";
 
-import { error, ok, parseJson, requireAdminApi, requirePrisma } from "@/lib/api-utils";
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  return withAdmin(async ({ prisma }) => {
+    return prisma.contactMessage.findUniqueOrThrow({ where: { id } });
+  });
+}
 
-const schema = z.object({ status: z.enum(["NEW", "READ", "ARCHIVED"]) });
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  return withAdmin(async ({ prisma, email }) => {
+    const before = await prisma.contactMessage.findUniqueOrThrow({ where: { id } });
+    const body = await parseBody<{ status: string }>(req);
+    const msg = await prisma.contactMessage.update({
+      where: { id },
+      data: { status: body.status as any },
+    });
+    await logAudit(prisma, { action: "UPDATE", entity: "ContactMessage", entityId: id, before, after: msg, metadata: { email } });
+    return msg;
+  });
+}
 
-export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
-  const session = await requireAdminApi();
-  if (!session) return error("Unauthorized", 401);
-  const prisma = requirePrisma();
-  if (!prisma) return error("Database is not configured", 503);
-  const { id } = await context.params;
-  const { data, response } = await parseJson(request, schema);
-  if (response) return response;
-
-  return ok(await prisma.contactMessage.update({ where: { id }, data }));
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  return withAdmin(async ({ prisma, email }) => {
+    const before = await prisma.contactMessage.findUniqueOrThrow({ where: { id } });
+    await prisma.contactMessage.delete({ where: { id } });
+    await logAudit(prisma, { action: "DELETE", entity: "ContactMessage", entityId: id, before, metadata: { email } });
+    return { deleted: true };
+  });
 }

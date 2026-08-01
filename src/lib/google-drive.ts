@@ -296,3 +296,42 @@ export async function uploadToGoogleDrive({ fileName, mimeType, bytes, folderId 
     url: mimeType.startsWith("image/") ? googleDriveImageUrl(id) : mimeType.startsWith("video/") ? googleDriveVideoUrl(id) : googleDriveFileUrl(id),
   };
 }
+
+// ─── Adapters for the new admin backend ──────────────────────────
+
+export type DriveFolder = { id: string; name: string };
+export type DriveFile = {
+  id: string;
+  name: string;
+  mimeType: string;
+  thumbnailUrl: string;
+};
+
+/** List subfolders in a folder (new admin API). */
+export async function listDriveFolders(parentId?: string): Promise<DriveFolder[]> {
+  const items = await listGoogleDriveFolder(parentId);
+  return items
+    .filter((i) => i.type === "folder")
+    .map((i) => ({ id: i.id, name: i.name }));
+}
+
+/** List image files in a folder (new admin API). */
+export async function listDriveImages(
+  folderId?: string,
+): Promise<{ files: DriveFile[]; nextPageToken?: string }> {
+  const items = await listGoogleDriveFolder(folderId);
+  const files = items
+    .filter((i) => i.type === "image")
+    .map((i) => ({
+      id: i.id,
+      name: i.name,
+      mimeType: i.mimeType,
+      thumbnailUrl: i.thumbnailUrl || googleDriveImageUrl(i.id),
+    }));
+  return { files };
+}
+
+/** Drive file ID → public thumbnail URL. */
+export function driveFileUrl(fileId: string, width = 2000): string {
+  return `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w${width}`;
+}

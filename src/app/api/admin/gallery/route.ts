@@ -1,24 +1,58 @@
-import { error, ok, requireAdminApi, requirePrisma } from "@/lib/api-utils";
+import { NextRequest } from "next/server";
+import { withAdmin, parseBody, slugify, logAudit } from "@/lib/api-helpers";
 
-export const dynamic = "force-dynamic";
-export const maxDuration = 60;
-
-export async function GET() {
-  const session = await requireAdminApi();
-  if (!session) return error("Unauthorized", 401);
-  const prisma = requirePrisma();
-  if (!prisma) return error("Database is not configured", 503);
-  return ok(
-    await prisma.galleryCollection.findMany({
-      where: { slug: { not: "hero-pics" } },
-      include: { images: { include: { mediaAsset: true }, orderBy: { sortOrder: "asc" } } },
-      orderBy: [{ locale: "asc" }, { sortOrder: "asc" }],
-    }),
-  );
+export async function GET(req: NextRequest) {
+  const locale = req.nextUrl.searchParams.get("locale");
+  return withAdmin(async ({ prisma }) => {
+    const collections = await prisma.galleryCollection.findMany({
+      where: locale ? { locale: locale as any } : undefined,
+      orderBy: { sortOrder: "asc" },
+      include: { _count: { select: { images: true } } },
+    });
+    return collections.map((c: any) => ({
+      ...c,
+      imageCount: c._count.images,
+      _count: undefined,
+    }));
+  });
 }
 
-export async function POST() {
-  const session = await requireAdminApi();
-  if (!session) return error("Unauthorized", 401);
-  return error("Create the category as a folder inside Google Drive, then click Sync Google Drive in Image Cloud.", 409);
+export async function POST(req: NextRequest) {
+  return withAdmin(async ({ prisma, email }) => {
+    const body = await parseBody<{
+      locale: string;
+      title: string;
+      slug?: string;
+      description?: string;
+      driveFolderId?: string;
+      sortOrder?: number;
+      status?: string;
+    }>(req);
+
+    const slug = body.slug || slugify(body.title);
+
+    let sortOrder = body.sortOrder;
+    if (sortOrder === undefined) {
+      const last = await prisma.galleryCollection.findFirst({
+        where: { locale: body.locale as any },
+        orderBy: { sortOrder: "desc" },
+        select: { sortOrder: true },
+      });
+      sortOrder = (last?.sortOrder ?? -1) + 1;
+    }
+
+    const collection = await prisma.galleryCollection.create({
+      data: {
+        locale: body.locale as any,
+        title: body.title,
+        slug,
+        description: body.description,
+        driveFolderId: body.driveFolderId,
+        sortOrder,
+        status: (body.status as any) || "DRAFT",
+      },
+    });
+    await logAudit(prisma, { action: "CREATE", entity: "GalleryCollection", entityId: collection.id, after: collection, metadata: { email } });
+    return collection;
+  });
 }

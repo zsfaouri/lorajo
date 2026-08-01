@@ -1,10 +1,12 @@
-import { error, ok, requireAdminApi, requirePrisma } from "@/lib/api-utils";
+import { NextRequest } from "next/server";
+import { withAdmin } from "@/lib/api-helpers";
 
-export async function GET() {
-  const session = await requireAdminApi();
-  if (!session) return error("Unauthorized", 401);
-  const prisma = requirePrisma();
-  if (!prisma) return error("Database is not configured", 503);
-
-  return ok(await prisma.contactMessage.findMany({ orderBy: { createdAt: "desc" } }));
+export async function GET(req: NextRequest) {
+  const status = req.nextUrl.searchParams.get("status");
+  return withAdmin(async ({ prisma }) => {
+    return prisma.contactMessage.findMany({
+      where: status ? { status: status as any } : undefined,
+      orderBy: { createdAt: "desc" },
+    });
+  });
 }

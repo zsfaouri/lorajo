@@ -1,24 +1,26 @@
-import { auditPayload, error, jsonInput, ok, parseJson, requireAdminApi, requirePrisma } from "@/lib/api-utils";
-import { themeSchema } from "@/lib/validations";
+import { NextRequest } from "next/server";
+import { withAdmin, parseBody, logAudit } from "@/lib/api-helpers";
 
-export async function PUT(request: Request) {
-  const session = await requireAdminApi();
-  if (!session) return error("Unauthorized", 401);
-
-  const prisma = requirePrisma();
-  if (!prisma) return error("Database is not configured", 503);
-
-  const { data, response } = await parseJson(request, themeSchema);
-  if (response) return response;
-
-  const theme = await prisma.siteTheme.findFirst({ where: { isActive: true } });
-  const saved = theme
-    ? await prisma.siteTheme.update({ where: { id: theme.id }, data: { tokens: jsonInput(data.tokens) } })
-    : await prisma.siteTheme.create({ data: { name: "LORA Theme", isActive: true, tokens: jsonInput(data.tokens) } });
-
-  await prisma.auditLog.create({
-    data: { userId: session.user?.id, action: "update", entity: "SiteTheme", entityId: saved.id, after: auditPayload(data.tokens) },
+export async function GET() {
+  return withAdmin(async ({ prisma }) => {
+    return prisma.siteTheme.findFirstOrThrow({
+      where: { isActive: true },
+      include: { designTokens: true },
+    });
   });
+}
 
-  return ok(saved);
+export async function PUT(req: NextRequest) {
+  return withAdmin(async ({ prisma, email }) => {
+    const { tokens } = await parseBody<{ tokens: Record<string, any> }>(req);
+    const active = await prisma.siteTheme.findFirstOrThrow({ where: { isActive: true } });
+    const before = { tokens: active.tokens };
+    const theme = await prisma.siteTheme.update({
+      where: { id: active.id },
+      data: { tokens },
+      include: { designTokens: true },
+    });
+    await logAudit(prisma, { action: "UPDATE", entity: "SiteTheme", entityId: active.id, before, after: { tokens }, metadata: { email } });
+    return theme;
+  });
 }

@@ -1,37 +1,49 @@
-import { z } from "zod";
+import { NextRequest } from "next/server";
+import { withAdmin, parseBody, logAudit } from "@/lib/api-helpers";
 
-import { auditPayload, error, ok, parseJson, requireAdminApi, requirePrisma } from "@/lib/api-utils";
-
-const schema = z.object({
-  items: z.array(
-    z.object({
-      locale: z.enum(["EN", "AR"]),
-      label: z.string().min(1),
-      path: z.string().min(1),
-      sortOrder: z.number().int(),
-      isVisible: z.boolean().default(true),
-    }),
-  ),
-});
-
-export async function PUT(request: Request) {
-  const session = await requireAdminApi();
-  if (!session) return error("Unauthorized", 401);
-
-  const prisma = requirePrisma();
-  if (!prisma) return error("Database is not configured", 503);
-
-  const { data, response } = await parseJson(request, schema);
-  if (response) return response;
-
-  await prisma.$transaction([
-    prisma.navigationItem.deleteMany({}),
-    ...data.items.map((item) => prisma.navigationItem.create({ data: item })),
-  ]);
-
-  await prisma.auditLog.create({
-    data: { userId: session.user?.id, action: "replace", entity: "NavigationItem", after: auditPayload(data) },
+export async function GET(req: NextRequest) {
+  const locale = req.nextUrl.searchParams.get("locale");
+  return withAdmin(async ({ prisma }) => {
+    return prisma.navigationItem.findMany({
+      where: locale ? { locale: locale as any } : undefined,
+      orderBy: { sortOrder: "asc" },
+      include: { children: { orderBy: { sortOrder: "asc" } } },
+    });
   });
+}
 
-  return ok({ saved: true });
+export async function POST(req: NextRequest) {
+  return withAdmin(async ({ prisma, email }) => {
+    const body = await parseBody<{
+      locale: string;
+      label: string;
+      path: string;
+      sortOrder?: number;
+      isVisible?: boolean;
+      parentId?: string;
+    }>(req);
+
+    let sortOrder = body.sortOrder;
+    if (sortOrder === undefined) {
+      const last = await prisma.navigationItem.findFirst({
+        where: { locale: body.locale as any, parentId: body.parentId ?? null },
+        orderBy: { sortOrder: "desc" },
+        select: { sortOrder: true },
+      });
+      sortOrder = (last?.sortOrder ?? -1) + 1;
+    }
+
+    const item = await prisma.navigationItem.create({
+      data: {
+        locale: body.locale as any,
+        label: body.label,
+        path: body.path,
+        sortOrder,
+        isVisible: body.isVisible ?? true,
+        parentId: body.parentId,
+      },
+    });
+    await logAudit(prisma, { action: "CREATE", entity: "NavigationItem", entityId: item.id, after: item, metadata: { email } });
+    return item;
+  });
 }
