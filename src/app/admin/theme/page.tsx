@@ -6,7 +6,37 @@ interface ThemeData {
   id: string;
   name: string;
   isActive: boolean;
-  tokens: Record<string, string>;
+  tokens: Record<string, Record<string, string>> | Record<string, string>;
+}
+
+function flattenTokens(tokens: Record<string, unknown>): Record<string, string> {
+  const flat: Record<string, string> = {};
+  for (const [group, value] of Object.entries(tokens ?? {})) {
+    if (value && typeof value === "object") {
+      for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
+        flat[`${group}.${key}`] = String(v ?? "");
+      }
+    } else {
+      flat[group] = String(value ?? "");
+    }
+  }
+  return flat;
+}
+
+function unflattenTokens(flat: Record<string, string>): Record<string, unknown> {
+  const nested: Record<string, Record<string, string> | string> = {};
+  for (const [key, value] of Object.entries(flat)) {
+    const dot = key.indexOf(".");
+    if (dot === -1) {
+      nested[key] = value;
+    } else {
+      const group = key.slice(0, dot);
+      const sub = key.slice(dot + 1);
+      if (typeof nested[group] !== "object" || nested[group] === null) nested[group] = {};
+      (nested[group] as Record<string, string>)[sub] = value;
+    }
+  }
+  return nested;
 }
 
 interface Toast {
@@ -20,6 +50,11 @@ const TYPOGRAPHY_KEYS = ["font", "text", "line", "letter"];
 const SPACING_KEYS = ["space", "gap", "padding", "margin"];
 
 function categorizeToken(key: string): "colors" | "typography" | "spacing" | "other" {
+  const group = key.includes(".") ? key.split(".")[0].toLowerCase() : key.toLowerCase();
+  if (group === "colors") return "colors";
+  if (group === "typography") return "typography";
+  if (group === "spacing") return "spacing";
+  if (group === "radii") return "other";
   const lower = key.toLowerCase();
   if (COLOR_KEYS.some((k) => lower.includes(k))) return "colors";
   if (TYPOGRAPHY_KEYS.some((k) => lower.includes(k))) return "typography";
@@ -28,6 +63,7 @@ function categorizeToken(key: string): "colors" | "typography" | "spacing" | "ot
 }
 
 function formatLabel(key: string): string {
+  if (key.includes(".")) key = key.split(".").slice(1).join(".");
   return key
     .replace(/([a-z])([A-Z])/g, "$1 $2")
     .replace(/[_-]/g, " ")
@@ -62,7 +98,7 @@ export default function ThemeEditorPage() {
         if (!res.ok) throw new Error("Failed to load theme");
         const data: ThemeData = await res.json();
         setTheme(data);
-        setTokens(data.tokens ?? {});
+        setTokens(flattenTokens((data.tokens as Record<string, unknown>) ?? {}));
       } catch {
         addToast("Failed to load theme data", "error");
       } finally {
@@ -83,12 +119,12 @@ export default function ThemeEditorPage() {
       const res = await fetch("/api/admin/theme", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...theme, tokens }),
+        body: JSON.stringify({ tokens: unflattenTokens(tokens) }),
       });
       if (!res.ok) throw new Error("Failed to save theme");
       const updated: ThemeData = await res.json();
       setTheme(updated);
-      setTokens(updated.tokens ?? {});
+      setTokens(flattenTokens((updated.tokens as Record<string, unknown>) ?? {}));
       addToast("Theme saved successfully", "success");
     } catch {
       addToast("Failed to save theme", "error");
