@@ -4,6 +4,10 @@ import path from "node:path";
 const nextConfig: NextConfig = {
   output: "standalone",
   outputFileTracingRoot: path.resolve(__dirname),
+  eslint: {
+    // Lint errors should not block production builds; run `pnpm lint` separately.
+    ignoreDuringBuilds: true,
+  },
   images: {
     remotePatterns: [
       {
