@@ -1,268 +1,194 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 
-interface GalleryCollection {
+interface DriveFolder {
   id: string;
-  locale: string;
-  title: string;
-  slug: string;
-  description: string | null;
-  status: "PUBLISHED" | "DRAFT";
+  name: string;
 }
 
-type LocaleTab = "ALL" | "EN" | "AR";
-
-const LOCALE_TABS: LocaleTab[] = ["ALL", "EN", "AR"];
-
-function Toast({ message, onClose }: { message: string; onClose: () => void }) {
-  useEffect(() => {
-    const t = setTimeout(onClose, 3000);
-    return () => clearTimeout(t);
-  }, [onClose]);
-
-  return (
-    <div className="fixed bottom-4 right-4 z-50 bg-gray-900 text-white px-4 py-2 rounded-md shadow-lg text-sm">
-      {message}
-    </div>
-  );
+interface DriveFile {
+  id: string;
+  name: string;
+  mimeType: string;
+  thumbnailUrl: string;
 }
 
-export default function GalleryListPage() {
-  const router = useRouter();
-  const [collections, setCollections] = useState<GalleryCollection[]>([]);
+const DRIVE_ROOT_URL =
+  "https://drive.google.com/drive/folders/1JPsc0Lp5TbxU6AoO093NVgyJYaYVmK6v";
+
+// Which Drive folders power which public page
+const GALLERY_FOLDER_NAMES = ["historical pics", "landmarks", "famous"];
+const ARCHIVE_FOLDER_NAMES = ["neighborhood archive"];
+
+function norm(name: string) {
+  return name.toLowerCase().trim();
+}
+
+export default function GalleryPage() {
+  const [folders, setFolders] = useState<DriveFolder[]>([]);
+  const [open, setOpen] = useState<DriveFolder | null>(null);
+  const [files, setFiles] = useState<DriveFile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<LocaleTab>("ALL");
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [loadingFiles, setLoadingFiles] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
-  // Create form state
-  const [newLocale, setNewLocale] = useState("EN");
-  const [newTitle, setNewTitle] = useState("");
-  const [newSlug, setNewSlug] = useState("");
-  const [newDescription, setNewDescription] = useState("");
-  const [newStatus, setNewStatus] = useState<"DRAFT" | "PUBLISHED">("DRAFT");
-  const [creating, setCreating] = useState(false);
-
-  const fetchCollections = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = activeTab !== "ALL" ? `?locale=${activeTab}` : "";
-      const res = await fetch(`/api/admin/gallery${params}`);
-      if (!res.ok) throw new Error("Failed to fetch collections");
-      const data = await res.json();
-      setCollections(data);
-    } catch {
-      setToast("Failed to load collections");
-    } finally {
-      setLoading(false);
-    }
-  }, [activeTab]);
-
   useEffect(() => {
-    fetchCollections();
-  }, [fetchCollections]);
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/drive/folders");
+        if (!res.ok) throw new Error("drive");
+        const data = await res.json();
+        setFolders(Array.isArray(data) ? data : []);
+      } catch {
+        setError("Could not reach Google Drive.");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
-    setCreating(true);
+  const openFolder = useCallback(async (folder: DriveFolder) => {
+    setOpen(folder);
+    setLoadingFiles(true);
+    setFiles([]);
     try {
-      const res = await fetch("/api/admin/gallery", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          locale: newLocale,
-          title: newTitle,
-          slug: newSlug,
-          description: newDescription || null,
-          status: newStatus,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to create collection");
-      setToast("Collection created");
-      setShowCreateForm(false);
-      setNewLocale("EN");
-      setNewTitle("");
-      setNewSlug("");
-      setNewDescription("");
-      setNewStatus("DRAFT");
-      fetchCollections();
+      const res = await fetch(
+        `/api/admin/drive/images?folderId=${encodeURIComponent(folder.id)}`,
+      );
+      const data = await res.json();
+      setFiles(Array.isArray(data?.files) ? data.files : []);
     } catch {
-      setToast("Failed to create collection");
+      setToast("Failed to load folder images");
+      setTimeout(() => setToast(null), 2500);
     } finally {
-      setCreating(false);
+      setLoadingFiles(false);
     }
+  }, []);
+
+  async function copyUrl(file: DriveFile) {
+    const url = `https://drive.google.com/thumbnail?id=${file.id}&sz=w2000`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setToast("Image URL copied");
+    } catch {
+      setToast(url);
+    }
+    setTimeout(() => setToast(null), 2500);
   }
 
-  async function handleDelete(id: string, title: string) {
-    if (!confirm(`Delete collection "${title}"? This cannot be undone.`)) return;
-    try {
-      const res = await fetch(`/api/admin/gallery/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete");
-      setToast("Collection deleted");
-      fetchCollections();
-    } catch {
-      setToast("Failed to delete collection");
-    }
+  const galleryFolders = folders.filter((f) =>
+    GALLERY_FOLDER_NAMES.includes(norm(f.name)),
+  );
+  const archiveFolders = folders.filter((f) =>
+    ARCHIVE_FOLDER_NAMES.includes(norm(f.name)),
+  );
+
+  function FolderGrid({ items }: { items: DriveFolder[] }) {
+    if (items.length === 0)
+      return <p className="text-sm text-gray-400">Folder not found in Drive.</p>;
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {items.map((f) => (
+          <button
+            key={f.id}
+            onClick={() => openFolder(f)}
+            className={`rounded-lg shadow p-4 text-left transition-shadow hover:shadow-md ${
+              open?.id === f.id ? "bg-blue-50 ring-2 ring-blue-400" : "bg-white"
+            }`}
+          >
+            <div className="text-2xl mb-1">&#128193;</div>
+            <div className="text-sm font-medium text-gray-800 truncate">{f.name}</div>
+            <div className="text-xs text-gray-500 mt-0.5">Click to view images</div>
+          </button>
+        ))}
+      </div>
+    );
   }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Gallery Collections</h1>
-        <button
-          onClick={() => setShowCreateForm(!showCreateForm)}
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 px-4 py-2 rounded shadow text-sm text-white bg-green-600 max-w-md break-all">
+          {toast}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="text-2xl font-bold text-gray-900">Gallery &amp; Archive</h1>
+        <a
+          href={DRIVE_ROOT_URL}
+          target="_blank"
+          rel="noreferrer"
           className="px-4 py-2 rounded text-sm font-medium bg-blue-600 text-white hover:bg-blue-700"
         >
-          {showCreateForm ? "Cancel" : "New Collection"}
-        </button>
+          Manage in Google Drive
+        </a>
       </div>
+      <p className="text-sm text-gray-500 mb-6">
+        The public Photo Gallery and Neighborhood Archive read directly from
+        Google Drive. Add or delete images in the folders below (in Drive) and
+        the website updates automatically — nothing to publish here.
+      </p>
 
-      {/* Create form */}
-      {showCreateForm && (
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Create Collection</h2>
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Locale</label>
-                <select
-                  value={newLocale}
-                  onChange={(e) => setNewLocale(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="EN">EN</option>
-                  <option value="AR">AR</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value as "DRAFT" | "PUBLISHED")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="DRAFT">Draft</option>
-                  <option value="PUBLISHED">Published</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                <input
-                  type="text"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Slug</label>
-                <input
-                  type="text"
-                  value={newSlug}
-                  onChange={(e) => setNewSlug(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <textarea
-                value={newDescription}
-                onChange={(e) => setNewDescription(e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={creating}
-                className="px-4 py-2 rounded text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                {creating ? "Creating..." : "Create Collection"}
-              </button>
-            </div>
-          </form>
+      {loading ? (
+        <div className="py-16 text-center text-sm text-gray-500">
+          Loading from Google Drive...
         </div>
-      )}
+      ) : error ? (
+        <div className="bg-red-50 text-red-700 text-sm rounded-md p-4">{error}</div>
+      ) : (
+        <>
+          <h2 className="text-lg font-semibold text-gray-800 mb-3">
+            Photo Gallery folders
+          </h2>
+          <div className="mb-8">
+            <FolderGrid items={galleryFolders} />
+          </div>
 
-      {/* Locale tabs */}
-      <div className="flex gap-1 mb-6 border-b border-gray-200">
-        {LOCALE_TABS.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === tab
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            {tab === "ALL" ? "All" : tab}
-          </button>
-        ))}
-      </div>
+          <h2 className="text-lg font-semibold text-gray-800 mb-3">
+            Neighborhood Archive folder
+          </h2>
+          <div className="mb-8">
+            <FolderGrid items={archiveFolders} />
+          </div>
 
-      {/* Loading */}
-      {loading && (
-        <div className="text-center py-12 text-gray-500">Loading collections...</div>
-      )}
-
-      {/* Empty state */}
-      {!loading && collections.length === 0 && (
-        <div className="text-center py-12 text-gray-500">
-          No collections found. Create one to get started.
-        </div>
-      )}
-
-      {/* Grid */}
-      {!loading && collections.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {collections.map((col) => (
-            <div
-              key={col.id}
-              className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-md transition-shadow group relative"
-              onClick={() => router.push(`/admin/gallery/${col.id}`)}
-            >
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                  {col.title}
-                </h3>
-                <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                    col.status === "PUBLISHED"
-                      ? "bg-green-100 text-green-800"
-                      : "bg-yellow-100 text-yellow-800"
-                  }`}
-                >
-                  {col.status}
-                </span>
+          {open && (
+            <>
+              <h2 className="text-lg font-semibold text-gray-800 mb-3">
+                {open.name} — {loadingFiles ? "loading..." : `${files.length} images`}
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {files.map((file) => (
+                  <div key={file.id} className="bg-white rounded-lg shadow overflow-hidden">
+                    <div className="w-full aspect-square bg-gray-100">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`https://drive.google.com/thumbnail?id=${file.id}&sz=w400`}
+                        alt={file.name}
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="p-2">
+                      <div className="text-xs text-gray-700 truncate" title={file.name}>
+                        {file.name}
+                      </div>
+                      <button
+                        onClick={() => copyUrl(file)}
+                        className="mt-1 w-full px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      >
+                        Copy URL
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <p className="text-sm text-gray-500 mb-1">
-                Locale: {col.locale} &middot; /{col.slug}
-              </p>
-              {col.description && (
-                <p className="text-sm text-gray-600 line-clamp-2">{col.description}</p>
-              )}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete(col.id, col.title);
-                }}
-                className="absolute bottom-4 right-4 px-3 py-1 rounded text-xs font-medium text-red-600 hover:bg-red-50 border border-red-200 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                Delete
-              </button>
-            </div>
-          ))}
-        </div>
+            </>
+          )}
+        </>
       )}
-
-      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
     </div>
   );
 }
