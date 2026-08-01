@@ -99,8 +99,8 @@ export default function MediaBrowserPage() {
     try {
       const res = await fetch("/api/admin/media");
       if (!res.ok) throw new Error("Failed to fetch media");
-      const data: MediaAsset[] = await res.json();
-      setAssets(data);
+      const data = await res.json();
+      setAssets(Array.isArray(data) ? data : (data.items ?? []));
     } catch {
       setToast("Failed to load media");
     } finally {
