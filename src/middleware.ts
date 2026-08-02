@@ -1,65 +1,32 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const COOKIE_NAME = "lora_admin_session";
-const SECRET = process.env.ADMIN_SECRET || process.env.AUTH_SECRET || "lora-admin-secret-change-me";
+import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
 
-async function verifyToken(token: string): Promise<boolean> {
-  try {
-    const decoded = atob(token);
-    const parts = decoded.split(":");
-    if (parts.length < 3) return false;
-
-    const sig = parts.pop()!;
-    const payload = parts.join(":");
-    const timestampStr = parts[parts.length - 1];
-
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-      "raw",
-      encoder.encode(SECRET),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"],
-    );
-    const expected = await crypto.subtle.sign("HMAC", key, encoder.encode(payload));
-    const expectedHex = Array.from(new Uint8Array(expected))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-
-    if (expectedHex !== sig) return false;
-
-    const timestamp = parseInt(timestampStr, 10);
-    if (Date.now() - timestamp > 7 * 24 * 60 * 60 * 1000) return false;
-
-    return true;
-  } catch {
-    return false;
-  }
-}
+const PUBLIC_ADMIN_PATHS = new Set(["/admin/login", "/api/admin/auth/login"]);
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Root redirect (unchanged behavior)
+  // Root locale redirect (unchanged public behaviour)
   if (pathname === "/") {
     const url = req.nextUrl.clone();
     url.pathname = "/en";
     return NextResponse.redirect(url, 308);
   }
 
-  // Protect admin routes
-  if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
-    if (pathname === "/admin/login" || pathname === "/api/admin/auth/login") {
-      return NextResponse.next();
-    }
+  const isAdmin = pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
+  if (!isAdmin || PUBLIC_ADMIN_PATHS.has(pathname)) {
+    return NextResponse.next();
+  }
 
-    const token = req.cookies.get(COOKIE_NAME)?.value;
-    if (!token || !(await verifyToken(token))) {
-      if (pathname.startsWith("/api/")) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-      return NextResponse.redirect(new URL("/admin/login", req.url));
+  const token = req.cookies.get(SESSION_COOKIE)?.value;
+  const session = token ? await verifySessionToken(token) : null;
+
+  if (!session) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    return NextResponse.redirect(new URL("/admin/login", req.url));
   }
 
   return NextResponse.next();
