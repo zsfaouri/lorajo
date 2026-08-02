@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
+import type { PrismaClient } from "@prisma/client";
+
 import { requirePrisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import type { PrismaClient } from "@prisma/client";
+import { tokenVersionFor } from "@/lib/session";
 
 export type ApiContext = {
   prisma: PrismaClient;
   email: string;
 };
 
-/** Wrap an admin API handler with auth + prisma checks. */
+/**
+ * Wraps an admin API handler with authentication, session-revocation checks,
+ * and consistent error handling.
+ */
 export async function withAdmin<T>(
   handler: (ctx: ApiContext) => Promise<T>,
 ): Promise<NextResponse> {
@@ -19,6 +24,21 @@ export async function withAdmin<T>(
     }
 
     const prisma = requirePrisma();
+
+    // Revocation: a password change rotates the token version, so sessions
+    // issued before the change stop working immediately.
+    const admin = await prisma.adminUser.findUnique({
+      where: { email: session.email },
+      select: { passwordHash: true },
+    });
+    if (!admin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const currentVersion = await tokenVersionFor(admin.passwordHash);
+    if (currentVersion !== session.version) {
+      return NextResponse.json({ error: "Session expired" }, { status: 401 });
+    }
+
     const result = await handler({ prisma, email: session.email });
     return NextResponse.json(result);
   } catch (err: unknown) {
@@ -28,12 +48,10 @@ export async function withAdmin<T>(
   }
 }
 
-/** Parse JSON body safely. */
 export async function parseBody<T>(request: Request): Promise<T> {
   return request.json() as Promise<T>;
 }
 
-/** Create a slug from a string. */
 export function slugify(text: string): string {
   return text
     .toLowerCase()
@@ -43,7 +61,18 @@ export function slugify(text: string): string {
     .slice(0, 80);
 }
 
-/** Audit log helper */
+/** Whitelist helper: keep only the fields a model allows clients to set. */
+export function pickFields<T extends Record<string, unknown>>(
+  body: Record<string, unknown>,
+  allowed: readonly string[],
+): T {
+  const out: Record<string, unknown> = {};
+  for (const key of allowed) {
+    if (key in body && body[key] !== undefined) out[key] = body[key];
+  }
+  return out as T;
+}
+
 export async function logAudit(
   prisma: PrismaClient,
   opts: {

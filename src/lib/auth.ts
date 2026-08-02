@@ -1,87 +1,47 @@
 import { cookies } from "next/headers";
 
-const COOKIE_NAME = "lora_admin_session";
-const SECRET = process.env.ADMIN_SECRET || process.env.AUTH_SECRET || "lora-admin-secret-change-me";
+import {
+  SESSION_COOKIE,
+  SESSION_COOKIE_OPTIONS,
+  createSessionToken,
+  getSessionSecret,
+  tokenVersionFor,
+  verifySessionToken,
+  type SessionPayload,
+} from "@/lib/session";
 
-// Simple token: base64(email + ":" + timestamp + ":" + hmac)
-// No external JWT library needed — we use Web Crypto API
+export {
+  SESSION_COOKIE,
+  SESSION_COOKIE_OPTIONS,
+  createSessionToken,
+  getSessionSecret,
+  tokenVersionFor,
+  verifySessionToken,
+};
+export type { SessionPayload };
 
-async function hmacSign(data: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(SECRET),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(data));
-  return Buffer.from(signature).toString("hex");
-}
-
-async function hmacVerify(data: string, signature: string): Promise<boolean> {
-  const expected = await hmacSign(data);
-  return expected === signature;
-}
-
-export async function createSessionToken(email: string): Promise<string> {
-  const timestamp = Date.now().toString();
-  const payload = `${email}:${timestamp}`;
-  const sig = await hmacSign(payload);
-  return Buffer.from(`${payload}:${sig}`).toString("base64");
-}
-
-export async function verifySessionToken(token: string): Promise<{ email: string } | null> {
-  try {
-    const decoded = Buffer.from(token, "base64").toString("utf-8");
-    const parts = decoded.split(":");
-    if (parts.length < 3) return null;
-
-    const sig = parts.pop()!;
-    const payload = parts.join(":");
-    const [email, timestampStr] = [parts.slice(0, -1).join(":"), parts[parts.length - 1]];
-
-    if (!await hmacVerify(payload, sig)) return null;
-
-    // Token expires after 7 days
-    const timestamp = parseInt(timestampStr, 10);
-    const sevenDays = 7 * 24 * 60 * 60 * 1000;
-    if (Date.now() - timestamp > sevenDays) return null;
-
-    return { email };
-  } catch {
-    return null;
-  }
-}
-
-export async function setSessionCookie(email: string) {
-  const token = await createSessionToken(email);
+export async function setSessionCookie(email: string, version: string) {
+  const token = await createSessionToken(email, version);
+  if (!token) throw new Error("ADMIN_SECRET is not configured");
   const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 7 * 24 * 60 * 60, // 7 days
-  });
+  cookieStore.set(SESSION_COOKIE, token, SESSION_COOKIE_OPTIONS);
 }
 
 export async function clearSessionCookie() {
   const cookieStore = await cookies();
-  cookieStore.delete(COOKIE_NAME);
+  cookieStore.delete(SESSION_COOKIE);
 }
 
-export async function getSession(): Promise<{ email: string } | null> {
+/** Signature/expiry check only. Revocation is enforced in withAdmin (needs DB). */
+export async function getSession(): Promise<SessionPayload | null> {
   const cookieStore = await cookies();
-  const token = cookieStore.get(COOKIE_NAME)?.value;
+  const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) return null;
   return verifySessionToken(token);
 }
 
-export async function requireAdmin() {
+export async function requireAdmin(): Promise<SessionPayload> {
   const session = await getSession();
-  if (!session) {
-    throw new Error("Unauthorized");
-  }
+  if (!session) throw new Error("Unauthorized");
   return session;
 }
