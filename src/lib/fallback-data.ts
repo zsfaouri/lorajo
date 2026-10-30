@@ -380,7 +380,7 @@ export const fallbackNeighborhoodArchive: NeighborhoodArchiveItem[] = [
     mediaType: "IMAGE",
     src: "/lora/gallery/square-de-paris.jpg",
     thumbnail: "/lora/gallery/square-de-paris.jpg",
-    folder: "Fallback archive",
+    folder: "Archive",
   },
   {
     id: "archive-dar-al-anda",
@@ -389,7 +389,7 @@ export const fallbackNeighborhoodArchive: NeighborhoodArchiveItem[] = [
     mediaType: "IMAGE",
     src: "/lora/gallery/dar-al-anda-art-gallery.jpg",
     thumbnail: "/lora/gallery/dar-al-anda-art-gallery.jpg",
-    folder: "Fallback archive",
+    folder: "Archive",
   },
   {
     id: "archive-blue-house",
@@ -398,7 +398,7 @@ export const fallbackNeighborhoodArchive: NeighborhoodArchiveItem[] = [
     mediaType: "IMAGE",
     src: "/lora/gallery/blue-house-4.jpg",
     thumbnail: "/lora/gallery/blue-house-4.jpg",
-    folder: "Fallback archive",
+    folder: "Archive",
   },
 ];
 

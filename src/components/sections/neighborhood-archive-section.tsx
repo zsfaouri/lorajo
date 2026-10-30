@@ -140,7 +140,6 @@ export function NeighborhoodArchiveSection({
                       ) : null}
                     </div>
                     <div className="grid gap-2 p-4">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-heritage-green)]">Label</p>
                       <h2 className="text-xl font-medium leading-tight text-black">{item.name}</h2>
                       {item.text ? <p className="text-sm leading-6 text-black/58">{item.text}</p> : null}
                     </div>

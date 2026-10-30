@@ -76,7 +76,7 @@ export async function getDriveNeighborhoodArchiveItems(): Promise<NeighborhoodAr
         mediaType: item.type === "video" ? "VIDEO" : "IMAGE",
         src: item.type === "video" ? (item.url ?? "") : (item.thumbnailUrl ?? item.url ?? ""),
         thumbnail: item.thumbnailUrl,
-        folder: "neighborhood-archive",
+        folder: "Archive",
       };
     });
 }
