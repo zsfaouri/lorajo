@@ -97,7 +97,7 @@ export function PublicHeader({
       </div>
 
       {open ? (
-        <div className="border-t border-white/10 bg-[var(--color-black)] px-[var(--space-page-x)] py-6 lg:hidden">
+        <div className="lora-mobile-menu border-t border-white/10 bg-[var(--color-black)] px-[var(--space-page-x)] py-6 lg:hidden">
           <nav className="flex flex-col gap-4">
             {navigation.map((item) => (
               <Link

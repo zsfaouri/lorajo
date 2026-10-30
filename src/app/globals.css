@@ -135,6 +135,11 @@ html.lenis body { height: auto; }
 .lora-public-header--docked::before { opacity: 0; }
 .lora-public-header--docked a { text-shadow: none; }
 .lora-public-header--docked .lora-public-brand img { border: 1px solid rgb(1 150 60 / 0.18); }
+/* The mobile menu panel is always near-black, so its links must stay light
+   even when the docked header switches the header text color to black.
+   Higher specificity than `.lora-public-header--docked a`. */
+.lora-public-header .lora-mobile-menu a { color: rgb(244 240 230 / 0.88); text-shadow: none; }
+.lora-public-header .lora-mobile-menu a:hover { color: rgb(244 240 230); }
 .lora-merged { --jade: #5f7a52; --jade-dark: #34452c; --bone: #f4f0e6; --bone-2: #ece6d7; --ink: #23271f; --ink-2: #41463a; --stone: #cdbfa6; --stone-dark: #a9997d; position: relative; overflow-x: clip; background: var(--bone); color: var(--ink); font-weight: 300; line-height: 1.65; }
 .lora-merged ::selection { background: var(--jade); color: var(--bone); }
 .lora-merged-bg { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; background: var(--bone); }

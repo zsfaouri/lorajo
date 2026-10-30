@@ -79,7 +79,9 @@ export async function POST(req: NextRequest) {
 
     // Always run a bcrypt comparison so response time does not reveal
     // whether the account exists.
-    const hash = admin?.passwordHash ?? "$2b$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvalidin";
+    // Valid (but unknowable) bcrypt hash so the comparison takes full time
+    // for nonexistent accounts too — prevents email enumeration via timing.
+    const hash = admin?.passwordHash ?? "$2a$12$cPhN8/Ihg2qs0NRAi2ASe.d.3Ro6S3TBqKfS.TBuyvnErBpLF5f/C";
     const valid = await bcrypt.compare(password, hash);
 
     if (!admin || !valid) {

@@ -39,7 +39,7 @@ export default function MembersPage() {
   const [editTitle, setEditTitle] = useState("");
   const [editBio, setEditBio] = useState("");
   const [editIsFounder, setEditIsFounder] = useState(false);
-  const [editStatus, setEditStatus] = useState("ACTIVE");
+  const [editStatus, setEditStatus] = useState("PUBLISHED");
   const [editMediaAssetId, setEditMediaAssetId] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -334,8 +334,9 @@ export default function MembersPage() {
                   onChange={(e) => setEditStatus(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="INACTIVE">INACTIVE</option>
+                  <option value="PUBLISHED">PUBLISHED (visible on site)</option>
+                  <option value="DRAFT">DRAFT (hidden)</option>
+                  <option value="ARCHIVED">ARCHIVED (hidden)</option>
                 </select>
               </div>
               <div>
@@ -415,7 +416,7 @@ export default function MembersPage() {
                 )}
                 <span
                   className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                    member.status === "ACTIVE"
+                    member.status === "PUBLISHED"
                       ? "bg-green-100 text-green-700"
                       : "bg-gray-100 text-gray-500"
                   }`}

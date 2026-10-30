@@ -354,7 +354,10 @@ export async function getGalleryCollections(locale: LocaleCode): Promise<Gallery
 export async function getNeighborhoodArchiveItems(locale: LocaleCode): Promise<NeighborhoodArchiveItem[]> {
   noStore();
   const prisma = getPrisma();
-  const driveFallback = () => withPublicTimeout(getDriveNeighborhoodArchiveItems().catch(() => []), []);
+  // The archive traverses nested Drive folders, which regularly exceeds the
+  // default 4s budget and silently served stale fallback content. Give it
+  // room to finish so new Drive uploads actually reach the public page.
+  const driveFallback = () => withPublicTimeout(getDriveNeighborhoodArchiveItems().catch(() => []), [], 15000);
   if (!prisma) {
     const driveItems = await driveFallback();
     return driveItems.length > 0 ? driveItems : fallbackNeighborhoodArchive;
